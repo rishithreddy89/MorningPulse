@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, TrendingUp, Database, Settings, RefreshCw } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Database, Settings, RefreshCw, Linkedin } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/trends", label: "Trends", icon: TrendingUp },
   { to: "/sources", label: "Sources", icon: Database },
+  { to: "/linkedin", label: "LinkedIn Intel", icon: Linkedin },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 

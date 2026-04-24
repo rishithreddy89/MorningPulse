@@ -131,3 +131,50 @@ def register_routes(app: Flask, run_pipeline_fn: Callable[[], object]) -> None:
                 "has_today_digest": digest is not None,
             }
         )
+
+    @app.get("/api/battle-cards")
+    def get_battle_cards():
+        """Return battle cards from the latest digest."""
+        try:
+            from database.storage import Storage
+            storage = Storage()
+            digest = storage.get_today_digest()
+            
+            if not digest:
+                return jsonify({
+                    "battle_cards": [],
+                    "message": "No digest available yet"
+                }), 404
+            
+            battle_cards = digest.get("battle_cards", [])
+            digest_date = digest.get("date", "")
+            
+            return jsonify({
+                "date": digest_date,
+                "battle_cards": battle_cards,
+                "total": len(battle_cards)
+            })
+        
+        except Exception as e:
+            print(f"Battle cards endpoint error: {e}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.get("/api/battle-cards/<date_str>")
+    def get_battle_cards_by_date(date_str: str):
+        """Return battle cards for a specific date."""
+        try:
+            from database.storage import Storage
+            storage = Storage()
+            digest = storage.get_digest(date_str)
+            
+            if not digest:
+                return jsonify({"error": f"No digest for {date_str}"}), 404
+            
+            return jsonify({
+                "date": date_str,
+                "battle_cards": digest.get("battle_cards", []),
+                "total": len(digest.get("battle_cards", []))
+            })
+        
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500

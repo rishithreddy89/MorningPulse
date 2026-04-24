@@ -1,0 +1,165 @@
+╔══════════════════════════════════════════════════════════════╗
+║         LinkedIn Intelligence - Quick Start Guide           ║
+╚══════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────┐
+│ 1. INSTALL DEPENDENCIES                                      │
+└──────────────────────────────────────────────────────────────┘
+
+cd backend
+pip install selenium webdriver-manager beautifulsoup4 lxml
+
+┌──────────────────────────────────────────────────────────────┐
+│ 2. CONFIGURE CREDENTIALS                                     │
+└──────────────────────────────────────────────────────────────┘
+
+Edit backend/.env and add:
+
+LINKEDIN_EMAIL=your_linkedin_email_here
+LINKEDIN_PASSWORD=your_linkedin_password_here
+
+⚠️  Use a dedicated LinkedIn account, not your personal one!
+
+┌──────────────────────────────────────────────────────────────┐
+│ 3. CREATE DATABASE TABLE                                     │
+└──────────────────────────────────────────────────────────────┘
+
+Run this SQL in Supabase SQL Editor:
+
+create table linkedin_intel (
+  id uuid default gen_random_uuid() primary key,
+  date text not null unique,
+  content jsonb,
+  created_at timestamp default now()
+);
+
+┌──────────────────────────────────────────────────────────────┐
+│ 4. START BACKEND                                             │
+└──────────────────────────────────────────────────────────────┘
+
+cd backend
+python main.py
+
+Backend will run on http://localhost:5000
+
+┌──────────────────────────────────────────────────────────────┐
+│ 5. USE THE FEATURE                                           │
+└──────────────────────────────────────────────────────────────┘
+
+1. Open dashboard in browser
+2. Click "LinkedIn Intel" in sidebar
+3. Click "Scrape LinkedIn" button
+4. Wait 3-5 minutes
+5. Page auto-refreshes with intelligence
+
+┌──────────────────────────────────────────────────────────────┐
+│ QUICK TEST                                                   │
+└──────────────────────────────────────────────────────────────┘
+
+# Test scraper (watch it work)
+python -c "
+from scraper.linkedin_scraper import LinkedInScraper
+s = LinkedInScraper(headless=False)
+posts = s.scrape_all()
+print(f'✅ Scraped {len(posts)} posts')
+"
+
+# Test API
+curl http://localhost:5000/api/linkedin/status
+
+┌──────────────────────────────────────────────────────────────┐
+│ WHAT IT DOES                                                 │
+└──────────────────────────────────────────────────────────────┘
+
+✓ Scrapes LinkedIn posts from 7 EdTech competitors
+✓ Analyzes with Gemini AI for competitive intelligence
+✓ Extracts competitor activities and market signals
+✓ Suggests Campus Cortex AI responses
+✓ Displays in professional dashboard UI
+
+┌──────────────────────────────────────────────────────────────┐
+│ TARGET COMPANIES                                             │
+└──────────────────────────────────────────────────────────────┘
+
+• ClassDojo
+• Canvas LMS (Instructure)
+• Schoology
+• PowerSchool
+• Blackboard
+• Seesaw
+• Remind
+
+┌──────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING                                              │
+└──────────────────────────────────────────────────────────────┘
+
+❌ Login fails
+   → Check credentials in .env
+   → Disable 2FA on LinkedIn account
+   → Try headless=False to debug
+
+❌ Security checkpoint
+   → LinkedIn detected automation
+   → Log in manually from same IP
+   → Wait 24 hours before retry
+
+❌ No posts scraped
+   → Companies may have no recent posts
+   → Check if login succeeded
+   → Verify company handles
+
+❌ Chrome driver error
+   → webdriver-manager auto-downloads
+   → Ensure Chrome is installed
+   → Check internet connection
+
+┌──────────────────────────────────────────────────────────────┐
+│ FILES CREATED                                                │
+└──────────────────────────────────────────────────────────────┘
+
+backend/scraper/linkedin_scraper.py
+backend/processor/linkedin_analyzer.py
+backend/api/linkedin_routes.py
+frontend/src/routes/linkedin.tsx
+
+┌──────────────────────────────────────────────────────────────┐
+│ FILES MODIFIED (minimal changes)                             │
+└──────────────────────────────────────────────────────────────┘
+
+backend/main.py                  → 2 lines added
+backend/requirements.txt         → 4 lines added
+backend/.env                     → 2 lines added
+frontend/.../DashboardLayout.tsx → 1 nav item added
+
+┌──────────────────────────────────────────────────────────────┐
+│ DOCUMENTATION                                                │
+└──────────────────────────────────────────────────────────────┘
+
+LINKEDIN_FEATURE.md          → Full documentation
+LINKEDIN_IMPLEMENTATION.md   → Implementation summary
+setup_linkedin.sh            → Automated setup script
+
+┌──────────────────────────────────────────────────────────────┐
+│ BEST PRACTICES                                               │
+└──────────────────────────────────────────────────────────────┘
+
+✓ Run daily maximum (not more frequently)
+✓ Use dedicated LinkedIn account
+✓ Monitor logs for security checkpoints
+✓ Keep headless=True in production
+✓ Review raw posts to verify quality
+
+┌──────────────────────────────────────────────────────────────┐
+│ SUPPORT                                                      │
+└──────────────────────────────────────────────────────────────┘
+
+See LINKEDIN_FEATURE.md for:
+• Complete API reference
+• Detailed troubleshooting
+• Architecture overview
+• Testing procedures
+• Performance metrics
+
+╔══════════════════════════════════════════════════════════════╗
+║  Ready to use! Start backend and click "LinkedIn Intel"     ║
+╚══════════════════════════════════════════════════════════════╝

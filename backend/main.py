@@ -12,6 +12,7 @@ from flask_cors import CORS
 
 import config
 from api.routes import register_routes
+from api.linkedin_routes import linkedin_bp
 from database.storage import Storage
 from processor.gemini_processor import GeminiProcessor
 from processor.post_selector import select_best_posts
@@ -19,6 +20,8 @@ from reporter.digest_builder import DigestBuilder
 from scheduler.job_scheduler import JobScheduler
 from scraper.hackernews_scraper import HackerNewsScraper
 from scraper.rss_scraper import RssScraper
+from scraper.news_rss_scraper import NewsRssScraper
+from processor.battle_card_generator import BattleCardGenerator
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = config.FLASK_SECRET_KEY
@@ -91,6 +94,7 @@ def run_pipeline() -> Optional[Dict[str, Any]]:
     reddit_posts: List[Dict[str, Any]] = []
     edsurge_posts: List[Dict[str, Any]] = []
     producthunt_posts: List[Dict[str, Any]] = []
+    news_rss_posts: List[Dict[str, Any]] = []
     rss_scraper = RssScraper()
 
     try:
@@ -105,11 +109,12 @@ def run_pipeline() -> Optional[Dict[str, Any]]:
     except Exception as exc:
         print(f"[Pipeline] Google News RSS scraper failed: {exc}")
 
+    # Replace broken Reddit with new RSS sources
     try:
-        reddit_posts = rss_scraper.fetch_reddit_rss()
-        print(f"[Pipeline] Reddit RSS: {len(reddit_posts)} posts")
+        news_rss_posts = NewsRssScraper(hours_lookback=48).scrape_all()
+        print(f"[Pipeline] News RSS (replaces Reddit): {len(news_rss_posts)} posts")
     except Exception as exc:
-        print(f"[Pipeline] Reddit RSS scraper failed: {exc}")
+        print(f"[Pipeline] News RSS scraper failed: {exc}")
 
     try:
         edsurge_posts = rss_scraper.fetch_edsurge()
@@ -123,7 +128,7 @@ def run_pipeline() -> Optional[Dict[str, Any]]:
     except Exception as exc:
         print(f"[Pipeline] Product Hunt scraper failed: {exc}")
 
-    all_posts = hn_posts + google_news_posts + reddit_posts + edsurge_posts + producthunt_posts
+    all_posts = hn_posts + google_news_posts + news_rss_posts + edsurge_posts + producthunt_posts
     print(f"[Pipeline] Total raw posts: {len(all_posts)}")
 
     # Use intelligent scoring and selection (top 15)
@@ -146,6 +151,26 @@ def run_pipeline() -> Optional[Dict[str, Any]]:
     date_str = date.today().isoformat()
     digest = DigestBuilder().build(gemini_output, date_str)
 
+    # --- NEW STEP: BATTLE CARDS ---
+    competitor_updates = digest.get("competitor_updates", [])
+    
+    if competitor_updates:
+        print(f"[Pipeline] Generating battle cards for "
+              f"{len(competitor_updates)} competitors...")
+        try:
+            battle_cards = BattleCardGenerator().generate_all(
+                competitor_updates
+            )
+            digest["battle_cards"] = battle_cards
+            print(f"[Pipeline] Added {len(battle_cards)} battle cards to digest")
+        except Exception as exc:
+            print(f"[Pipeline] Battle card generation failed: {exc}")
+            digest["battle_cards"] = []
+    else:
+        digest["battle_cards"] = []
+        print("[Pipeline] No competitor updates found, skipping battle cards")
+    # --- END NEW STEP ---
+
     storage = Storage()
     storage.save_digest(digest)
 
@@ -155,6 +180,7 @@ def run_pipeline() -> Optional[Dict[str, Any]]:
 
 
 register_routes(app, run_pipeline)
+app.register_blueprint(linkedin_bp)
 
 
 def _resolve_frontend_dir() -> Optional[str]:

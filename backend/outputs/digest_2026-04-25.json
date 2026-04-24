@@ -2,68 +2,94 @@
   "date": "2026-04-25",
   "competitor_updates": [
     {
-      "title": "Education Advanced Acquires School Software Group",
-      "description": "Education Advanced has expanded its K-12 market presence by acquiring School Software Group to strengthen its leadership position. This move consolidates administrative software offerings and signals a trend toward integrated platform suites in the school district market.",
+      "competitor_name": "Education Advanced",
+      "title": "Acquisition of School Software Group finalized",
+      "description": "Education Advanced has strengthened its K-12 market position through the strategic acquisition of School Software Group. This move impacts the EdTech market by consolidating scheduling and curriculum management tools, affecting district leaders looking for unified administrative software suites that streamline operations. Further monitoring recommended.",
+      "impact_level": "high",
       "sources": [
         {
-          "source_name": "Education Advanced Strengthens Their K-12 EdTech Leadership Position Through Acquisition of School Software Group - PR Newswire",
-          "url": "https://news.google.com/rss/articles/CBMi_gFBVV95cUxNY0VPcjgxRkVWNXF5NjF6TGM1VW5IZjhCVENOc0cyYi13YlFZZlJOR3RabUJmdUVWekF5aVlsZHVPMmRTTzNLM3BOU0lGQ0dQMkNXUTZ0N01yRVhYdDdNWUpwNFo3dTc4b2k4UlhWUml2YUN3dnlKM3lfa245SE82bGtTZjRLekhHWTVPei0wYnljR2xLR19PT2h2WXlkbi1rU201MVY3M2kzdHBCSWpSeWJqTVNsNjA3aEJWMllGUlR5Qi10c3hsdmxobFBFVGNUR1JyR1p3R2d1TXU2cy1JcXZjY0RFeTRycU1FTWZPMjlqcWpfRXE2VnZQeUxhQQ?oc=5"
-        }
-      ]
-    },
-    {
-      "title": "Districts Consolidate Bloated Edtech Stacks",
-      "description": "School districts are actively re-evaluating their digital tool inventories to prioritize quality and impact over sheer quantity. This shift forces competitors to prove efficacy and integration capabilities to avoid being cut during budget-driven stack audits.",
-      "sources": [
-        {
-          "source_name": "Too Many Tools, Not Enough Impact: Districts Rethink Their Edtech Stacks",
-          "url": "https://www.edsurge.com/news/2026-04-02-too-many-tools-not-enough-impact-districts-rethink-their-edtech-stacks"
+          "url": "https://news.google.com/rss/articles/CBMi_gFBVV95cUxNY0VPcjgxRkVWNXF5NjF6TGM1VW5IZjhCVENOc0cyYi13YlFZZlJOR3RabUJmdUVWekF5aVlsZHVPMmRTTzNLM3BOU0lGQ0dQMkNXUTZ0N01yRVhYdDdNWUpwNFo3dTc4b2k4UlhWUml2YUN3dnlKM3lfa245SE82bGtTZjRLekhHWTVPei0wYnljR2xLR19PT2h2WXlkbi1rU201MVY3M2kzdHBCSWpSeWJqTVNsNjA3aEJWMllGUlR5Qi10c3hsdmxobFBFVGNUR1JyR1p3R2d1TXU2cy1JcXZjY0RFeTRycU1FTWZPMjlqcWpfRXE2VnZQeUxhQQ?oc=5",
+          "source_name": "google_news"
         }
       ]
     }
   ],
   "user_pain_points": [
     {
-      "issue": "Complex Student Data Privacy Vetting",
-      "context": "Educators and administrators struggle with the technical and legal complexities of vetting classroom apps for student data privacy compliance. This burden creates a bottleneck for technology adoption and exposes districts to potential security risks if not managed properly.",
+      "issue": "Districts face massive edtech tool bloat",
+      "context": "Districts are currently re-examining their digital tool stacks due to budget trimming and a realization that many apps lack impact. Teachers are overwhelmed by the sheer number of disconnected platforms and wish for integrated, high-quality tools that actually improve learning outcomes. Further monitoring recommended.",
       "sources": [
         {
-          "source_name": "How to Vet Schools' Apps for Student Data Privacy - EdTech Magazine",
-          "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxPNTlCNmZDZ21zRUJhMWQwVkVQUzN6MTRmNWxDcjNTOV9Ob3FvZUYyLWY0NDllejBYbjFzTld4cU43RU5BUEFrdnBqMUt0RGlOZnF6X3F6d0RiOTUzME1wMEhHa3VXMkw4ZmhaTUZpQ3owZmtGT0VKelFfMWhqRDdzT3EwOE5jdF9ucEUyTXhnZnFqQQ?oc=5"
+          "url": "https://www.edsurge.com/news/2026-04-02-too-many-tools-not-enough-impact-districts-rethink-their-edtech-stacks",
+          "source_name": "edsurge"
         }
       ]
     },
     {
-      "issue": "AI Grading Lacks Personal Connection",
-      "context": "There is growing concern that replacing teacher feedback with AI-generated grading diminishes the personal instructional relationship between students and educators. Teachers find that automated assessments often fail to capture the nuanced understanding required for effective personalized learning.",
+      "issue": "Student usability gap in edtech design",
+      "context": "Educational technology products often fail to meet student needs because they are designed to impress school administrators during sales demos. Students find these tools unintuitive or boring, leading to low engagement levels. Teachers want tools designed specifically for student interaction rather than administrative compliance. Further monitoring recommended.",
       "sources": [
         {
-          "source_name": "What Students Gain When Teachers \u2014 Not AI \u2014 Grade Students\u2019 Work",
-          "url": "https://www.edsurge.com/news/2026-02-24-what-students-gain-when-teachers-not-ai-grade-students-work"
+          "url": "https://www.edsurge.com/news/2026-02-04-how-researchers-are-putting-students-at-the-center-of-edtech-design",
+          "source_name": "edsurge"
+        }
+      ]
+    },
+    {
+      "issue": "Complex data privacy vetting requirements",
+      "context": "Schools are struggling to properly vet applications for student data privacy, which creates significant administrative burdens for already overworked teachers. The current process is fragmented and slow, making it difficult to adopt new tools quickly while ensuring legal compliance and student safety. Further monitoring recommended.",
+      "sources": [
+        {
+          "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxPNTlCNmZDZ21zRUJhMWQwVkVQUzN6MTRmNWxDcjNTOV9Ob3FvZUYyLWY0NDllejBYbjFzTld4cU43RU5BUEFrdnBqMUt0RGlOZnF6X3F6d0RiOTUzME1wMEhHa3VXMkw4ZmhaTUZpQ3owZmtGT0VKelFfMWhqRDdzT3EwOE5jdF9ucEUyTXhnZnFqQQ?oc=5",
+          "source_name": "google_news"
         }
       ]
     }
   ],
   "emerging_tech_trends": [
     {
-      "trend": "Student-Centered Edtech Design Research",
-      "explanation": "Researchers are increasingly involving students directly in the design process to ensure educational tools meet actual learner needs and preferences. This trend is driven by the realization that products designed without student input often fail to engage users effectively in real-world settings.",
+      "trend": "Legislative movement toward screen free schools",
+      "explanation": "Legislators are increasingly pushing for policies that reduce screen time or remove digital devices from classrooms entirely. This growing trend challenges EdTech companies to prove their value beyond just digitizing paper, emphasizing the need for tools that do not rely on constant screen interaction. Further monitoring recommended.",
+      "volume": 3,
       "sources": [
         {
-          "source_name": "How Researchers Are Putting Students at the Center of Edtech Design",
-          "url": "https://www.edsurge.com/news/2026-02-04-how-researchers-are-putting-students-at-the-center-of-edtech-design"
+          "url": "https://www.edsurge.com/news/2026-03-09-screen-free-schools-some-legislators-push-for-a-new-normal",
+          "source_name": "edsurge"
         }
       ]
     },
     {
-      "trend": "Teacher-Led Classroom Technology Integration",
-      "explanation": "Rather than following top-down mandates, teachers are customizing how they use technology to fit their specific pedagogical styles and classroom needs. This trend highlights a shift toward flexible, modular tools that empower educator agency rather than rigid, one-size-fits-all platforms.",
+      "trend": "Student centered research driven design",
+      "explanation": "EdTech firms are shifting focus toward student-centric design as researchers highlight that tools impressing adults often fail students. This trend is growing because districts now prioritize student engagement and measurable outcomes over flashy features. It forces companies to involve students directly in the product development lifecycle. Further monitoring recommended.",
+      "volume": 5,
       "sources": [
         {
-          "source_name": "How Teachers Make Classroom Technology Work for Them",
-          "url": "https://www.edsurge.com/news/2026-02-23-how-teachers-make-classroom-technology-work-for-them"
+          "url": "https://www.edsurge.com/news/2026-04-15-what-makes-edtech-work-for-students-infographic",
+          "source_name": "edsurge"
         }
       ]
+    }
+  ],
+  "battle_cards": [
+    {
+      "competitor_name": "Education Advanced",
+      "their_strength": "Analysis unavailable. Retry pipeline.",
+      "their_weakness": "Analysis unavailable. Retry pipeline.",
+      "campus_cortex_advantage": "Campus Cortex AI offers streamlined onboarding and unified workflows. Detailed analysis pending.",
+      "pricing_signal": "Not detected",
+      "user_sentiment": "mixed",
+      "sentiment_reason": "Insufficient data for analysis.",
+      "sales_talking_point": "Campus Cortex AI provides a unified, affordable alternative.",
+      "threat_level": "high",
+      "recommended_response": "monitor",
+      "response_action": "Monitor competitor activity and retry.",
+      "sources": [
+        {
+          "url": "https://news.google.com/rss/articles/CBMi_gFBVV95cUxNY0VPcjgxRkVWNXF5NjF6TGM1VW5IZjhCVENOc0cyYi13YlFZZlJOR3RabUJmdUVWekF5aVlsZHVPMmRTTzNLM3BOU0lGQ0dQMkNXUTZ0N01yRVhYdDdNWUpwNFo3dTc4b2k4UlhWUml2YUN3dnlKM3lfa245SE82bGtTZjRLekhHWTVPei0wYnljR2xLR19PT2h2WXlkbi1rU201MVY3M2kzdHBCSWpSeWJqTVNsNjA3aEJWMllGUlR5Qi10c3hsdmxobFBFVGNUR1JyR1p3R2d1TXU2cy1JcXZjY0RFeTRycU1FTWZPMjlqcWpfRXE2VnZQeUxhQQ?oc=5",
+          "source_name": "google_news"
+        }
+      ],
+      "_generated": false
     }
   ]
 }

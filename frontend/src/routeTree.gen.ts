@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TrendsRouteImport } from './routes/trends'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as LinkedinRouteImport } from './routes/linkedin'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TrendsRoute = TrendsRouteImport.update({
@@ -29,6 +30,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LinkedinRoute = LinkedinRouteImport.update({
+  id: '/linkedin',
+  path: '/linkedin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -37,12 +43,14 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/linkedin': typeof LinkedinRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/trends': typeof TrendsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/linkedin': typeof LinkedinRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/trends': typeof TrendsRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/linkedin': typeof LinkedinRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/trends': typeof TrendsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/settings' | '/sources' | '/trends'
+  fullPaths: '/' | '/linkedin' | '/settings' | '/sources' | '/trends'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/settings' | '/sources' | '/trends'
-  id: '__root__' | '/' | '/settings' | '/sources' | '/trends'
+  to: '/' | '/linkedin' | '/settings' | '/sources' | '/trends'
+  id: '__root__' | '/' | '/linkedin' | '/settings' | '/sources' | '/trends'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LinkedinRoute: typeof LinkedinRoute
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
   TrendsRoute: typeof TrendsRoute
@@ -92,6 +102,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/linkedin': {
+      id: '/linkedin'
+      path: '/linkedin'
+      fullPath: '/linkedin'
+      preLoaderRoute: typeof LinkedinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -104,6 +121,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LinkedinRoute: LinkedinRoute,
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
   TrendsRoute: TrendsRoute,

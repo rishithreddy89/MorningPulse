@@ -64,3 +64,40 @@ export async function triggerPipelineRun(): Promise<boolean> {
     return false;
   }
 }
+
+export interface BattleCard {
+  competitor_name: string;
+  their_strength: string;
+  their_weakness: string;
+  campus_cortex_advantage: string;
+  pricing_signal: string;
+  user_sentiment: "positive" | "negative" | "mixed";
+  sentiment_reason: string;
+  sales_talking_point: string;
+  threat_level: "high" | "medium" | "low";
+  recommended_response: "immediate" | "monitor" | "ignore";
+  response_action: string;
+  sources?: Array<{ source_name: string; url: string }>;
+}
+
+export interface BattleCardsResponse {
+  date: string;
+  battle_cards: BattleCard[];
+  total: number;
+}
+
+export async function fetchBattleCards(): Promise<BattleCardsResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/battle-cards`);
+    if (isNotFound(res.status)) {
+      return null;
+    }
+    if (!res.ok) {
+      throw new Error("Failed to fetch battle cards");
+    }
+    return (await res.json()) as BattleCardsResponse;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+}

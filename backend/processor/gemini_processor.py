@@ -1,11 +1,97 @@
-"""Gemini-based EdTech intelligence extraction and memo generation."""
+"""Gemini-based EdTech intelligence extraction with robust error handling."""
 
 import json
+import re
+import time
+from datetime import date
 from typing import Any, Dict, List
 
 import google.generativeai as genai
 
 import config
+
+
+def extract_json(raw_text: str) -> dict:
+    """Extract JSON from Gemini response robustly."""
+    cleaned = re.sub(r'```json\s*', '', raw_text)
+    cleaned = re.sub(r'```\s*', '', cleaned)
+    cleaned = cleaned.strip()
+    
+    start = cleaned.find('{')
+    if start == -1:
+        raise ValueError("No JSON object found")
+    
+    depth = 0
+    end = -1
+    for i, ch in enumerate(cleaned[start:], start):
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    
+    if end == -1:
+        raise ValueError("Unmatched braces - truncated JSON")
+    
+    json_str = cleaned[start:end]
+    return json.loads(json_str)
+
+
+GEMINI_PROMPT = """
+CRITICAL: Your entire response must be ONLY a JSON object.
+First character must be {{ and last character must be }}.
+Zero text before or after. Zero markdown. Zero explanation.
+
+You are a senior market intelligence analyst for Campus Cortex AI, an EdTech SaaS startup.
+
+Analyze the {post_count} posts below. Extract intelligence.
+
+STRICT FIELD RULES — violations will break production:
+- "issue", "context", "description", "explanation" fields:
+  MINIMUM 20 words each. NEVER empty string. NEVER null.
+  If info is limited, write what you know and append: "Further monitoring recommended."
+- "title", "trend" fields: 4 to 8 words exactly
+- "sources": at least 1 item per entry always
+- All arrays: minimum 1 item, maximum 5 items
+
+Return this exact structure:
+{{
+  "date": "{date}",
+  "user_pain_points": [
+    {{
+      "issue": "4-8 word title of the pain",
+      "context": "Minimum 20 words explaining what teachers struggle with, why it hurts productivity, and what they wish existed instead.",
+      "sources": [{{"url": "exact url", "source_name": "site name"}}]
+    }}
+  ],
+  "competitor_updates": [
+    {{
+      "competitor_name": "Exact Company Name",
+      "title": "4-8 word title of their announcement",
+      "description": "Minimum 20 words describing what this competitor announced, why it matters to the EdTech market, and who it affects.",
+      "impact_level": "high",
+      "sources": [{{"url": "exact url", "source_name": "site name"}}]
+    }}
+  ],
+  "emerging_tech_trends": [
+    {{
+      "trend": "4-6 word trend name",
+      "explanation": "Minimum 20 words explaining what this trend is, why it is growing right now, and what it means for EdTech companies.",
+      "volume": 5,
+      "sources": [{{"url": "exact url", "source_name": "site name"}}]
+    }}
+  ]
+}}
+
+impact_level must be exactly one of: high, medium, low
+volume must be an integer (estimated posts about this topic)
+competitor_name must be a real company name from the posts
+
+POSTS TO ANALYZE:
+{context}
+"""
 
 
 class GeminiProcessor:
@@ -17,217 +103,140 @@ class GeminiProcessor:
         self.model = genai.GenerativeModel(config.GEMINI_MODEL)
         print("[GeminiProcessor] Gemini processor initialized")
 
-    def _clean_response(self, raw_text: str) -> str:
-        """Remove markdown fences and whitespace from Gemini responses."""
-        import re
-        cleaned = (raw_text or "").strip()
-        
-        # Remove ```json ... ``` or ``` ... ```
-        if "```" in cleaned:
-            cleaned = re.sub(r'```(?:json)?\s*', '', cleaned)
-            cleaned = cleaned.replace('```', '').strip()
-        
-        # Find JSON object boundaries as last resort
-        if not cleaned.startswith("{"):
-            start = cleaned.find("{")
-            end = cleaned.rfind("}") + 1
-            if start != -1 and end > start:
-                cleaned = cleaned[start:end]
-        
-        return cleaned.strip()
-
-    def _format_posts_for_prompt(self, posts: List[Dict[str, Any]]) -> str:
-        """Format posts compactly — max 8 posts, 100 char summaries."""
-        lines = []
-        for i, post in enumerate(posts[:8], 1):
-            title = post.get("title", "").strip()
-            summary = (post.get("summary") or post.get("content") or "")[:100].strip()
-            url = post.get("url") or post.get("link") or ""
-            source = post.get("source", "")
-            lines.append(
-                f"{i}. TITLE: {title}\n"
-                f"   SOURCE: {source}\n"
-                f"   SUMMARY: {summary}\n"
-                f"   URL: {url}"
-            )
-        return "\n\n".join(lines)
-
-    def _safe_parse_json(self, raw_text: str) -> dict:
-        """Try to parse JSON, repair truncation if needed."""
-        try:
-            return json.loads(raw_text)
-        except json.JSONDecodeError as e:
-            print(f"[GeminiProcessor] JSON parse error: {e}")
-            print(f"[GeminiProcessor] Raw response preview: {raw_text[:300]}")
-        
-        try:
-            repaired = self._repair_truncated_json(raw_text)
-            if repaired:
-                result = json.loads(repaired)
-                print("[GeminiProcessor] JSON repaired successfully")
-                return result
-        except Exception:
-            pass
-        
-        raise json.JSONDecodeError("Could not repair JSON", raw_text, 0)
-
-    def _repair_truncated_json(self, text: str) -> str:
-        """Attempt to close truncated JSON by counting open brackets/braces."""
-        open_braces = 0
-        open_brackets = 0
-        in_string = False
-        escape_next = False
-        last_safe_pos = 0
-        
-        for i, char in enumerate(text):
-            if escape_next:
-                escape_next = False
-                continue
-            if char == '\\' and in_string:
-                escape_next = True
-                continue
-            if char == '"' and not escape_next:
-                in_string = not in_string
-            if not in_string:
-                if char == '{':
-                    open_braces += 1
-                elif char == '}':
-                    open_braces -= 1
-                    if open_braces == 0:
-                        last_safe_pos = i + 1
-                elif char == '[':
-                    open_brackets += 1
-                elif char == ']':
-                    open_brackets -= 1
-        
-        if last_safe_pos > 0 and last_safe_pos < len(text):
-            truncated = text[:last_safe_pos]
-            closing = ']' * max(0, open_brackets) + '}' * max(0, open_braces)
-            return truncated + closing
-        
-        if in_string:
-            last_quote = text.rfind('",', 0, len(text) - 50)
-            if last_quote > 0:
-                truncated = text[:last_quote + 1]
-                braces = truncated.count('{') - truncated.count('}')
-                brackets = truncated.count('[') - truncated.count(']')
-                closing = ']' * max(0, brackets) + '}' * max(0, braces)
-                return truncated + closing
-        
-        return None
-
     def process(self, posts: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze filtered EdTech posts and return strict three-section JSON with sources."""
-        if not posts:
-            return self._default_output()
-
-        # DEBUG: Verify input data
-        print(f"[GeminiProcessor] Received {len(posts)} posts")
-        print(f"[GeminiProcessor] Sending 8 posts to Gemini")
-        urls_count = sum(1 for p in posts if p.get("url"))
-        print(f"[GeminiProcessor] {urls_count}/{len(posts)} posts have URLs")
-
-        # Store posts for source URL mapping
-        self._input_posts = posts
+        """Process posts through Gemini with retry and validation."""
+        if len(posts) > 35:
+            mid = len(posts) // 2
+            d1 = self._process_chunk(posts[:mid])
+            d2 = self._process_chunk(posts[mid:])
+            return self._merge(d1, d2)
         
-        # Fail fast if no valid URLs
-        if all(not p.get("url") for p in posts):
-            print("[ERROR] No valid URLs found in input posts - skipping source mapping")
-            return self._default_output()
+        return self._process_chunk(posts)
+
+    def _process_chunk(self, posts: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Single chunk processing with 3 attempts."""
+        context = self._build_context(posts)
+        prompt = GEMINI_PROMPT.format(
+            post_count=len(posts),
+            date=date.today().isoformat(),
+            context=context
+        )
         
-        self._build_title_url_map(posts)
-
-        prompt = f"""
-You are an EdTech intelligence analyst. Analyze the following articles and return a JSON digest.
-
-STRICT FIELD RULES - read carefully:
-- "title" / "issue" / "trend" = SHORT LABEL ONLY. Maximum 6 words.
-   Think of it like a newspaper headline. Examples:
-   GOOD: "Edtech Tool Fatigue", "Screen-Free Classrooms", "AI Grading Concerns"
-   BAD:  "Edtech tool fatigue and budget constraints are leading school districts..."
-
-- "description" / "context" / "explanation" = FULL EXPLANATION.
-   Must be 2-3 complete sentences. Must NEVER be empty.
-   Explain: what is happening, why it matters, what is driving it.
-
-- "source_name" = exact article title as given in input
-- "url" = exact URL as given in input
-
-Return ONLY this JSON structure, no markdown, no extra text:
-
-{{
-  "competitor_updates": [
-    {{
-      "title": "Short label 6 words max",
-      "description": "2-3 sentences explaining what happened, which company, and why it matters for the EdTech market.",
-      "sources": [{{"source_name": "exact article title", "url": "exact url"}}]
-    }}
-  ],
-  "user_pain_points": [
-    {{
-      "issue": "Short label 6 words max",
-      "context": "2-3 sentences describing the pain point, who experiences it, and its impact on schools or educators.",
-      "sources": [{{"source_name": "exact article title", "url": "exact url"}}]
-    }}
-  ],
-  "emerging_tech_trends": [
-    {{
-      "trend": "Short label 6 words max",
-      "explanation": "2-3 sentences explaining what this trend is, what is driving it, and why it matters for EdTech.",
-      "sources": [{{"source_name": "exact article title", "url": "exact url"}}]
-    }}
-  ]
-}}
-
-Generate at least 2 items per category. All text fields must be non-empty.
-
-Articles to analyze:
-{self._format_posts_for_prompt(posts)}
-"""
-
-        try:
-            response = self.model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=4000,
-                    temperature=0.3,
-                    response_mime_type="application/json",
-                )
-            )
-            raw_text = self._clean_response(getattr(response, "text", "") or "")
-            parsed = self._safe_parse_json(raw_text)
-            parsed = self._fix_gemini_structure(parsed)
-            normalized = self._normalize_output(parsed)
-            normalized = self._validate_and_fix_digest(normalized, posts)
+        last_error = None
+        for attempt in range(3):
+            try:
+                response = self.model.generate_content(prompt)
+                parsed = extract_json(response.text)
+                validated = self._validate(parsed)
+                print(f"Gemini success on attempt {attempt + 1}")
+                return validated
             
-            print("[GeminiProcessor] Gemini processing successful")
-            print("[Gemini Output with Sources]", json.dumps(normalized, indent=2))
-            return normalized
-        except json.JSONDecodeError as e:
-            print("[GeminiProcessor] JSON parse failed, retrying with stricter prompt")
-            return self._retry_process(posts)
-        except Exception as exc:
-            print(f"[GeminiProcessor] Gemini error: {exc}")
-            return self._heuristic_output(posts)
+            except (json.JSONDecodeError, ValueError) as e:
+                last_error = e
+                print(f"Attempt {attempt+1} failed: {e}")
+                time.sleep(3 * (attempt + 1))
+            
+            except Exception as e:
+                last_error = e
+                print(f"Gemini API error attempt {attempt+1}: {e}")
+                time.sleep(5)
+        
+        print(f"All attempts failed: {last_error}")
+        return self._default_digest()
 
-    def _retry_process(self, posts: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Retry Gemini call with stricter output guardrails."""
-        retry_prompt = f"""
-You are an AI Market Intelligence Engine focused on EdTech.
-Return ONLY a valid JSON object with exactly these keys:
-- competitor_updates (each with sources array containing only source_name)
-- user_pain_points (each with sources array containing only source_name)
-- emerging_tech_trends (each with sources array containing only source_name)
+    def _validate(self, parsed: dict) -> dict:
+        """Ensure no empty fields. Fill with placeholder if empty."""
+        for c in parsed.get("competitor_updates", []):
+            if "name" in c and "competitor_name" not in c:
+                c["competitor_name"] = c.pop("name")
+            if "explanation" in c and "description" not in c:
+                c["description"] = c.pop("explanation")
+            if len(c.get("description", "")) < 10:
+                c["description"] = (
+                    f"{c.get('competitor_name','This competitor')} "
+                    f"made an update related to {c.get('title','')}. "
+                    "Further monitoring recommended."
+                )
+            if "impact_level" not in c:
+                c["impact_level"] = "medium"
+        
+        for t in parsed.get("emerging_tech_trends", []):
+            if "description" in t and "explanation" not in t:
+                t["explanation"] = t.pop("description")
+            if len(t.get("explanation", "")) < 10:
+                t["explanation"] = (
+                    f"The trend '{t.get('trend','')}' is gaining "
+                    "traction in the EdTech space. "
+                    "Further monitoring recommended."
+                )
+            if "volume" not in t:
+                t["volume"] = 1
+        
+        for p in parsed.get("user_pain_points", []):
+            if len(p.get("context", "")) < 10:
+                p["context"] = (
+                    f"Teachers are experiencing challenges with "
+                    f"{p.get('issue','')}. "
+                    "Further monitoring recommended."
+                )
+        
+        return parsed
 
-Each item MUST include a "sources" field with at least one source from the input posts.
-Format: {{"source_name": "..."}}
-Do NOT generate URLs - only source names.
+    def _build_context(self, posts: list) -> str:
+        """Format posts into context string, hard cap at 18000 chars."""
+        lines = []
+        for p in posts:
+            line = (
+                f"SOURCE: {p.get('source','unknown')} | "
+                f"TITLE: {p.get('title','')} | "
+                f"CONTENT: {p.get('summary', p.get('content',''))[:350]} | "
+                f"URL: {p.get('url','')}"
+            )
+            lines.append(line)
+        
+        full = "\n---\n".join(lines)
+        if len(full) > 18000:
+            full = full[:18000]
+            print(f"Context truncated to 18000 chars")
+        return full
 
-Do not include markdown, comments, or extra keys.
+    def _merge(self, d1: dict, d2: dict) -> dict:
+        """Merge two digest chunks, deduplicate by competitor name."""
+        merged = {
+            "date": d1.get("date", date.today().isoformat()),
+            "user_pain_points": (
+                d1.get("user_pain_points", []) + 
+                d2.get("user_pain_points", [])
+            )[:5],
+            "emerging_tech_trends": (
+                d1.get("emerging_tech_trends", []) + 
+                d2.get("emerging_tech_trends", [])
+            )[:5],
+            "competitor_updates": [],
+        }
+        seen = set()
+        for c in (d1.get("competitor_updates", []) + 
+                  d2.get("competitor_updates", [])):
+            name = c.get("competitor_name", "unknown").lower()
+            if name not in seen:
+                seen.add(name)
+                merged["competitor_updates"].append(c)
+            if len(merged["competitor_updates"]) >= 5:
+                break
+        return merged
 
-Input:
-{self._format_posts_for_prompt(posts)}
-"""
+    def _default_digest(self) -> dict:
+        return {
+            "date": date.today().isoformat(),
+            "user_pain_points": [],
+            "competitor_updates": [],
+            "emerging_tech_trends": [],
+            "_pipeline_error": True,
+            "_message": "Gemini processing failed. Check logs."
+        }
+
+    def generate_weekly_memo(self, digests: List[Dict[str, Any]]) -> str:
+        """Generate weekly strategy memo from multiple digests."""
         try:
             response = self.model.generate_content(
                 retry_prompt,

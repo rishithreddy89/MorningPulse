@@ -9,3 +9,7 @@ python-dotenv
 supabase
 feedparser
 textblob
+selenium
+webdriver-manager
+beautifulsoup4
+lxml
