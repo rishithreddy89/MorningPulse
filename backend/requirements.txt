@@ -1,0 +1,11 @@
+flask
+flask-cors
+praw
+google-generativeai
+apscheduler
+requests
+jinja2
+python-dotenv
+supabase
+feedparser
+textblob

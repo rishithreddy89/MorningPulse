@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { LayoutDashboard, TrendingUp, Database, Settings, RefreshCw } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -9,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DashboardDataProvider, useDashboardData } from "@/lib/dashboard-context";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -19,12 +21,35 @@ const nav = [
 ] as const;
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation();
-  const [refreshing, setRefreshing] = useState(false);
+  return (
+    <DashboardDataProvider>
+      <DashboardLayoutShell>{children}</DashboardLayoutShell>
+    </DashboardDataProvider>
+  );
+}
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+function DashboardLayoutShell({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  const { dates, digest, selectedDate, isRefreshing, isLoading, selectDate, refreshDigest } =
+    useDashboardData();
+
+  const dateOptions = useMemo(() => {
+    if (digest?.date && !dates.includes(digest.date)) {
+      return [digest.date, ...dates];
+    }
+    return dates;
+  }, [dates, digest?.date]);
+
+  const handleRefresh = async () => {
+    const loadingToast = toast.loading("Refreshing data...");
+    const ok = await refreshDigest();
+
+    if (ok) {
+      toast.success("Digest refreshed", { id: loadingToast });
+      return;
+    }
+
+    toast.error("Backend not reachable. Start server.", { id: loadingToast });
   };
 
   return (
@@ -35,23 +60,32 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           <span className="text-sm font-semibold tracking-tight">MorningPulse AI</span>
         </div>
         <div className="flex items-center gap-2">
-          <Select defaultValue="today">
+          <Select
+            value={selectedDate ?? undefined}
+            onValueChange={(value) => {
+              void selectDate(value);
+            }}
+            disabled={isLoading || dateOptions.length === 0}
+          >
             <SelectTrigger className="h-9 w-[150px] text-sm">
-              <SelectValue />
+              <SelectValue placeholder={dateOptions.length > 0 ? "Select date" : "No dates"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
+              {dateOptions.map((date) => (
+                <SelectItem key={date} value={date}>
+                  {date}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button
             variant="outline"
             size="sm"
             onClick={handleRefresh}
+            disabled={isRefreshing}
             className="h-9 gap-2"
           >
-            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
             Refresh
           </Button>
         </div>

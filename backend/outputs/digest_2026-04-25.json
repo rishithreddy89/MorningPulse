@@ -1,0 +1,69 @@
+{
+  "date": "2026-04-25",
+  "competitor_updates": [
+    {
+      "title": "Education Advanced Acquires School Software Group",
+      "description": "Education Advanced has expanded its K-12 market presence by acquiring School Software Group to strengthen its leadership position. This move consolidates administrative software offerings and signals a trend toward integrated platform suites in the school district market.",
+      "sources": [
+        {
+          "source_name": "Education Advanced Strengthens Their K-12 EdTech Leadership Position Through Acquisition of School Software Group - PR Newswire",
+          "url": "https://news.google.com/rss/articles/CBMi_gFBVV95cUxNY0VPcjgxRkVWNXF5NjF6TGM1VW5IZjhCVENOc0cyYi13YlFZZlJOR3RabUJmdUVWekF5aVlsZHVPMmRTTzNLM3BOU0lGQ0dQMkNXUTZ0N01yRVhYdDdNWUpwNFo3dTc4b2k4UlhWUml2YUN3dnlKM3lfa245SE82bGtTZjRLekhHWTVPei0wYnljR2xLR19PT2h2WXlkbi1rU201MVY3M2kzdHBCSWpSeWJqTVNsNjA3aEJWMllGUlR5Qi10c3hsdmxobFBFVGNUR1JyR1p3R2d1TXU2cy1JcXZjY0RFeTRycU1FTWZPMjlqcWpfRXE2VnZQeUxhQQ?oc=5"
+        }
+      ]
+    },
+    {
+      "title": "Districts Consolidate Bloated Edtech Stacks",
+      "description": "School districts are actively re-evaluating their digital tool inventories to prioritize quality and impact over sheer quantity. This shift forces competitors to prove efficacy and integration capabilities to avoid being cut during budget-driven stack audits.",
+      "sources": [
+        {
+          "source_name": "Too Many Tools, Not Enough Impact: Districts Rethink Their Edtech Stacks",
+          "url": "https://www.edsurge.com/news/2026-04-02-too-many-tools-not-enough-impact-districts-rethink-their-edtech-stacks"
+        }
+      ]
+    }
+  ],
+  "user_pain_points": [
+    {
+      "issue": "Complex Student Data Privacy Vetting",
+      "context": "Educators and administrators struggle with the technical and legal complexities of vetting classroom apps for student data privacy compliance. This burden creates a bottleneck for technology adoption and exposes districts to potential security risks if not managed properly.",
+      "sources": [
+        {
+          "source_name": "How to Vet Schools' Apps for Student Data Privacy - EdTech Magazine",
+          "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxPNTlCNmZDZ21zRUJhMWQwVkVQUzN6MTRmNWxDcjNTOV9Ob3FvZUYyLWY0NDllejBYbjFzTld4cU43RU5BUEFrdnBqMUt0RGlOZnF6X3F6d0RiOTUzME1wMEhHa3VXMkw4ZmhaTUZpQ3owZmtGT0VKelFfMWhqRDdzT3EwOE5jdF9ucEUyTXhnZnFqQQ?oc=5"
+        }
+      ]
+    },
+    {
+      "issue": "AI Grading Lacks Personal Connection",
+      "context": "There is growing concern that replacing teacher feedback with AI-generated grading diminishes the personal instructional relationship between students and educators. Teachers find that automated assessments often fail to capture the nuanced understanding required for effective personalized learning.",
+      "sources": [
+        {
+          "source_name": "What Students Gain When Teachers \u2014 Not AI \u2014 Grade Students\u2019 Work",
+          "url": "https://www.edsurge.com/news/2026-02-24-what-students-gain-when-teachers-not-ai-grade-students-work"
+        }
+      ]
+    }
+  ],
+  "emerging_tech_trends": [
+    {
+      "trend": "Student-Centered Edtech Design Research",
+      "explanation": "Researchers are increasingly involving students directly in the design process to ensure educational tools meet actual learner needs and preferences. This trend is driven by the realization that products designed without student input often fail to engage users effectively in real-world settings.",
+      "sources": [
+        {
+          "source_name": "How Researchers Are Putting Students at the Center of Edtech Design",
+          "url": "https://www.edsurge.com/news/2026-02-04-how-researchers-are-putting-students-at-the-center-of-edtech-design"
+        }
+      ]
+    },
+    {
+      "trend": "Teacher-Led Classroom Technology Integration",
+      "explanation": "Rather than following top-down mandates, teachers are customizing how they use technology to fit their specific pedagogical styles and classroom needs. This trend highlights a shift toward flexible, modular tools that empower educator agency rather than rigid, one-size-fits-all platforms.",
+      "sources": [
+        {
+          "source_name": "How Teachers Make Classroom Technology Work for Them",
+          "url": "https://www.edsurge.com/news/2026-02-23-how-teachers-make-classroom-technology-work-for-them"
+        }
+      ]
+    }
+  ]
+}
