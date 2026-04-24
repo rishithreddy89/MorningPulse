@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeader } from "@/components/dashboard/Primitives";
+import { ChatPanel } from "@/components/ChatPanel";
 import { useDashboardData } from "@/lib/dashboard-context";
 import { useEffect, useState } from "react";
 import { fetchBattleCards, type BattleCard } from "@/lib/api";
@@ -284,6 +285,13 @@ export function DashboardPage() {
       {renderPainPoints()}
       {renderCompetitors()}
       {renderBattleCards()}
+      <section>
+        <SectionHeader
+          title="Ask the Data"
+          description="Chat with your digest to get instant answers"
+        />
+        <ChatPanel date={digest?.date} />
+      </section>
     </>
   );
 
