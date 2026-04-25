@@ -44,17 +44,98 @@ CRITICAL: Your entire response must be ONLY a JSON object.
 First character must be {{ and last character must be }}.
 Zero text before or after. Zero markdown. Zero explanation.
 
-You are a senior market intelligence analyst for Campus Cortex AI, an EdTech SaaS startup.
+You are a senior competitive intelligence analyst for Campus Cortex AI, an EdTech SaaS startup.
 
 Analyze the {post_count} posts below. Extract intelligence.
 
-STRICT FIELD RULES — violations will break production:
+════════════════════════════════════════════════════════════════════════════
+CLASSIFICATION RULES (CRITICAL - READ CAREFULLY):
+════════════════════════════════════════════════════════════════════════════
+
+COMPETITOR UPDATES - ONLY include if a company takes DIRECT ACTION:
+✅ INCLUDE:
+  - Acquisitions ("Company X acquires Company Y")
+  - Funding rounds ("Company X raises $50M Series B")
+  - Product launches ("Company X launches new AI grading tool")
+  - Partnerships ("Company X partners with School District Y")
+  - Major hires ("Company X hires former Google exec as CTO")
+  - Feature releases ("Company X adds video conferencing to platform")
+  - Pricing changes ("Company X cuts prices by 30%")
+  - Market expansion ("Company X enters European market")
+
+❌ DO NOT INCLUDE:
+  - General market trends ("EdTech companies are focusing on AI")
+  - Regulatory discussions ("New privacy laws may affect EdTech")
+  - User complaints ("Teachers frustrated with tool complexity")
+  - Industry analysis ("Market consolidation accelerating")
+  - Opinion pieces ("Why EdTech needs to change")
+
+EMERGING TRENDS - Industry-wide patterns:
+✅ INCLUDE:
+  - Technology adoption patterns ("AI tutoring gaining traction")
+  - Market movements ("Shift toward privacy-first design")
+  - Regulatory changes ("New data privacy requirements")
+  - Behavioral shifts ("Teachers preferring mobile-first tools")
+  - Industry consolidation ("Wave of EdTech acquisitions")
+
+USER PAIN POINTS - Problems teachers/students face:
+✅ INCLUDE:
+  - Tool complexity issues
+  - Integration problems
+  - Cost concerns
+  - Training gaps
+  - Performance issues
+
+════════════════════════════════════════════════════════════════════════════
+DEDUPLICATION RULES (CRITICAL):
+════════════════════════════════════════════════════════════════════════════
+
+1. If multiple posts describe THE SAME EVENT:
+   - Merge them into ONE update
+   - Combine sources
+   - Use the most detailed description
+   
+   Example:
+   Post 1: "ClassDojo raises $50M"
+   Post 2: "ClassDojo secures Series C funding of $50M"
+   → ONE update: "ClassDojo raises $50M Series C"
+
+2. Each competitor should appear ONCE unless they have MULTIPLE DISTINCT EVENTS:
+   - ✅ OK: ClassDojo raises funding + ClassDojo launches feature
+   - ❌ NOT OK: ClassDojo raises funding (mentioned twice)
+
+3. Remove generic "Market Signal" entries:
+   - Only include if it's a SPECIFIC industry trend
+   - Not a catch-all for unclassified posts
+
+════════════════════════════════════════════════════════════════════════════
+OUTPUT REQUIREMENTS:
+════════════════════════════════════════════════════════════════════════════
+
+- competitor_updates: 0-5 items (ONLY real company actions)
+- emerging_tech_trends: 3-5 items (industry patterns)
+- user_pain_points: 2-4 items (teacher/student problems)
+
+- Each competitor_name must be a REAL company name (not "Market Signal")
+- Each update must map to ONE specific event
+- No duplicate companies unless DIFFERENT events
+- No duplicate events
+
+KEYWORD CONTEXT (use this to identify trends):
+{keyword_context}
+
+COMPETITOR GROUPING:
+{competitor_grouping}
+
+════════════════════════════════════════════════════════════════════════════
+FIELD RULES:
+════════════════════════════════════════════════════════════════════════════
 - "issue", "context", "description", "explanation" fields:
   MINIMUM 20 words each. NEVER empty string. NEVER null.
   If info is limited, write what you know and append: "Further monitoring recommended."
 - "title", "trend" fields: 4 to 8 words exactly
 - "sources": at least 1 item per entry always
-- All arrays: minimum 1 item, maximum 5 items
+- competitor_name: MUST be a real company name from posts (not "Market Signal")
 
 Return this exact structure:
 {{
@@ -68,9 +149,9 @@ Return this exact structure:
   ],
   "competitor_updates": [
     {{
-      "competitor_name": "Exact Company Name",
-      "title": "4-8 word title of their announcement",
-      "description": "Minimum 20 words describing what this competitor announced, why it matters to the EdTech market, and who it affects.",
+      "competitor_name": "Exact Company Name (MUST be real company)",
+      "title": "4-8 word title of their SPECIFIC ACTION",
+      "description": "Minimum 20 words describing what SPECIFIC ACTION this competitor took, why it matters to the EdTech market, and who it affects.",
       "impact_level": "high",
       "sources": [{{"url": "exact url", "source_name": "site name"}}]
     }}
@@ -78,7 +159,7 @@ Return this exact structure:
   "emerging_tech_trends": [
     {{
       "trend": "4-6 word trend name",
-      "explanation": "Minimum 20 words explaining what this trend is, why it is growing right now, and what it means for EdTech companies.",
+      "explanation": "Minimum 20 words explaining what this INDUSTRY-WIDE trend is, why it is growing right now, and what it means for EdTech companies.",
       "volume": 5,
       "sources": [{{"url": "exact url", "source_name": "site name"}}]
     }}
@@ -87,7 +168,6 @@ Return this exact structure:
 
 impact_level must be exactly one of: high, medium, low
 volume must be an integer (estimated posts about this topic)
-competitor_name must be a real company name from the posts
 
 POSTS TO ANALYZE:
 {context}
@@ -115,11 +195,23 @@ class GeminiProcessor:
 
     def _process_chunk(self, posts: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Single chunk processing with 3 attempts."""
+        # ════════════════════════════════════════════════════════════════════
+        # PREPROCESSING: Group by competitor and extract keywords
+        # ════════════════════════════════════════════════════════════════════
+        competitor_groups = self._group_by_competitor(posts)
+        keyword_frequencies = self._extract_keyword_frequencies(posts)
+        
+        # Build context strings
         context = self._build_context(posts)
+        keyword_context = self._build_keyword_context(keyword_frequencies)
+        competitor_grouping = self._build_competitor_grouping(competitor_groups)
+        
         prompt = GEMINI_PROMPT.format(
             post_count=len(posts),
             date=date.today().isoformat(),
-            context=context
+            context=context,
+            keyword_context=keyword_context,
+            competitor_grouping=competitor_grouping
         )
         
         last_error = None
@@ -145,25 +237,113 @@ class GeminiProcessor:
         return self._default_digest()
 
     def _validate(self, parsed: dict) -> dict:
-        """Ensure no empty fields. Fill with placeholder if empty."""
+        """Ensure no empty fields, deduplicate, and enforce classification rules."""
+        
+        # ════════════════════════════════════════════════════════════════
+        # STEP 1: Clean and validate competitor updates
+        # ════════════════════════════════════════════════════════════════
+        competitor_updates = []
+        seen_events = set()  # Track unique events
+        seen_companies = {}  # Track companies and their events
+        
         for c in parsed.get("competitor_updates", []):
+            # Normalize field names
             if "name" in c and "competitor_name" not in c:
                 c["competitor_name"] = c.pop("name")
             if "explanation" in c and "description" not in c:
                 c["description"] = c.pop("explanation")
-            if len(c.get("description", "")) < 10:
-                c["description"] = (
-                    f"{c.get('competitor_name','This competitor')} "
-                    f"made an update related to {c.get('title','')}. "
+            
+            competitor_name = c.get("competitor_name", "").strip()
+            title = c.get("title", "").strip()
+            description = c.get("description", "").strip()
+            
+            # ════════════════════════════════════════════════════════════
+            # CLASSIFICATION RULE: Only include DIRECT company actions
+            # ════════════════════════════════════════════════════════════
+            
+            # Skip if no real company name
+            if not competitor_name or competitor_name.lower() in ["market signal", "industry trend", "unknown", "market_signal"]:
+                print(f"[Classifier] Skipping non-company update: {title}")
+                continue
+            
+            # Skip if it's a general trend (not a specific action)
+            trend_keywords = ["trend", "movement", "shift", "pattern", "growing", "increasing", "industry"]
+            if any(keyword in title.lower() for keyword in trend_keywords):
+                print(f"[Classifier] Moving to trends: {title}")
+                continue
+            
+            # Skip if it's a user pain point
+            pain_keywords = ["struggle", "frustrated", "problem", "issue", "challenge", "difficulty"]
+            if any(keyword in title.lower() for keyword in pain_keywords):
+                print(f"[Classifier] Moving to pain points: {title}")
+                continue
+            
+            # ════════════════════════════════════════════════════════════
+            # DEDUPLICATION: Check for duplicate events
+            # ════════════════════════════════════════════════════════════
+            
+            # Create event signature for deduplication
+            event_signature = f"{competitor_name.lower()}:{title.lower()[:30]}"
+            
+            if event_signature in seen_events:
+                print(f"[Dedup] Skipping duplicate event: {competitor_name} - {title}")
+                continue
+            
+            # Check if company already has an update
+            if competitor_name in seen_companies:
+                # Allow multiple updates only if they're DIFFERENT events
+                existing_titles = seen_companies[competitor_name]
+                
+                # Check similarity
+                is_duplicate = False
+                for existing_title in existing_titles:
+                    # Simple similarity check
+                    common_words = set(title.lower().split()) & set(existing_title.lower().split())
+                    if len(common_words) >= 2:  # If 2+ words match, likely duplicate
+                        print(f"[Dedup] Skipping similar event for {competitor_name}: {title}")
+                        is_duplicate = True
+                        break
+                
+                if is_duplicate:
+                    continue
+                
+                seen_companies[competitor_name].append(title)
+            else:
+                seen_companies[competitor_name] = [title]
+            
+            seen_events.add(event_signature)
+            
+            # ════════════════════════════════════════════════════════════
+            # VALIDATION: Ensure minimum field requirements
+            # ════════════════════════════════════════════════════════════
+            
+            if len(description) < 20:
+                description = (
+                    f"{competitor_name} "
+                    f"made an update related to {title}. "
                     "Further monitoring recommended."
                 )
+            
             if "impact_level" not in c:
                 c["impact_level"] = "medium"
+            
+            c["competitor_name"] = competitor_name
+            c["title"] = title
+            c["description"] = description
+            
+            competitor_updates.append(c)
         
+        parsed["competitor_updates"] = competitor_updates[:5]  # Max 5
+        
+        print(f"[Classifier] Competitor updates after dedup: {len(competitor_updates)}")
+        
+        # ════════════════════════════════════════════════════════════════
+        # STEP 2: Validate emerging trends
+        # ════════════════════════════════════════════════════════════════
         for t in parsed.get("emerging_tech_trends", []):
             if "description" in t and "explanation" not in t:
                 t["explanation"] = t.pop("description")
-            if len(t.get("explanation", "")) < 10:
+            if len(t.get("explanation", "")) < 20:
                 t["explanation"] = (
                     f"The trend '{t.get('trend','')}' is gaining "
                     "traction in the EdTech space. "
@@ -172,8 +352,11 @@ class GeminiProcessor:
             if "volume" not in t:
                 t["volume"] = 1
         
+        # ════════════════════════════════════════════════════════════════
+        # STEP 3: Validate user pain points
+        # ════════════════════════════════════════════════════════════════
         for p in parsed.get("user_pain_points", []):
-            if len(p.get("context", "")) < 10:
+            if len(p.get("context", "")) < 20:
                 p["context"] = (
                     f"Teachers are experiencing challenges with "
                     f"{p.get('issue','')}. "
@@ -190,7 +373,8 @@ class GeminiProcessor:
                 f"SOURCE: {p.get('source','unknown')} | "
                 f"TITLE: {p.get('title','')} | "
                 f"CONTENT: {p.get('summary', p.get('content',''))[:350]} | "
-                f"URL: {p.get('url','')}"
+                f"URL: {p.get('url','')} | "
+                f"COMPETITOR: {p.get('detected_competitor', 'unknown')}"
             )
             lines.append(line)
         
@@ -199,6 +383,62 @@ class GeminiProcessor:
             full = full[:18000]
             print(f"Context truncated to 18000 chars")
         return full
+    
+    def _group_by_competitor(self, posts: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+        """Group posts by detected competitor."""
+        groups = {}
+        
+        for post in posts:
+            competitor = post.get("detected_competitor", "market_signal")
+            if competitor not in groups:
+                groups[competitor] = []
+            groups[competitor].append(post)
+        
+        return groups
+    
+    def _extract_keyword_frequencies(self, posts: List[Dict[str, Any]]) -> Dict[str, int]:
+        """Extract keyword frequencies for trend detection."""
+        from collections import Counter
+        import re
+        
+        keywords = []
+        
+        for post in posts:
+            title = post.get("title", "").lower()
+            summary = post.get("summary", "").lower()
+            text = f"{title} {summary}"
+            
+            # Extract meaningful words (3+ chars)
+            words = re.findall(r'\b[a-z]{3,}\b', text)
+            keywords.extend(words)
+        
+        # Count frequencies
+        counter = Counter(keywords)
+        
+        # Filter common words
+        common = {"the", "and", "for", "with", "this", "that", "from", "have", "been", "will", "are", "was"}
+        filtered = {k: v for k, v in counter.items() if k not in common and v >= 2}
+        
+        return dict(sorted(filtered.items(), key=lambda x: x[1], reverse=True)[:15])
+    
+    def _build_keyword_context(self, keywords: Dict[str, int]) -> str:
+        """Build keyword context string for Gemini."""
+        if not keywords:
+            return "No significant keywords detected."
+        
+        lines = [f"- {keyword}: {count} mentions" for keyword, count in keywords.items()]
+        return "\n".join(lines)
+    
+    def _build_competitor_grouping(self, groups: Dict[str, List[Dict[str, Any]]]) -> str:
+        """Build competitor grouping string for Gemini."""
+        if not groups:
+            return "No competitors detected."
+        
+        lines = []
+        for competitor, posts in groups.items():
+            lines.append(f"- {competitor}: {len(posts)} posts")
+        
+        return "\n".join(lines)
 
     def _merge(self, d1: dict, d2: dict) -> dict:
         """Merge two digest chunks, deduplicate by competitor name."""

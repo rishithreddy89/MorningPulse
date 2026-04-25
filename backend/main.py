@@ -28,9 +28,9 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = config.FLASK_SECRET_KEY
 CORS(app)
 
-MAX_GEMINI_POSTS = 15  # Send up to 15 posts to Gemini
-MAX_SUMMARY_LENGTH = 200  # Limit summary length to control token usage
-MAX_TOTAL_CHARS = 4000  # Maximum total character count for Gemini input
+MAX_GEMINI_POSTS = 40  # Send up to 40 posts to Gemini (increased from 15)
+MAX_SUMMARY_LENGTH = 250  # Increased summary length
+MAX_TOTAL_CHARS = 8000  # Increased total character count for Gemini input
 
 
 
@@ -132,20 +132,29 @@ def run_pipeline() -> Optional[Dict[str, Any]]:
     all_posts = hn_posts + google_news_posts + news_rss_posts + edsurge_posts + producthunt_posts
     print(f"[Pipeline] Total raw posts: {len(all_posts)}")
 
-    # Use intelligent scoring and selection (top 15)
-    filtered_posts = select_best_posts(all_posts, n=15)
+    # Use intelligent scoring and selection with diversity (20-40 posts)
+    filtered_posts = select_best_posts(all_posts, n=40)
 
     if not filtered_posts:
         gemini_output = _empty_edtech_output()
     else:
         print("[Pipeline] Sending to Gemini...")
-        # Prepare optimized input (up to 15 posts with token limits)
+        # Prepare optimized input (up to 40 posts with increased token limits)
         gemini_input = _prepare_gemini_input(filtered_posts)
         print(f"[Pipeline] Gemini input: {len(gemini_input)} posts")
         
         # DEBUG: Verify URLs are preserved
         urls_in_input = sum(1 for p in gemini_input if p.get("url"))
         print(f"[Pipeline] DEBUG: {urls_in_input}/{len(gemini_input)} posts have URLs in Gemini input")
+        
+        # DEBUG: Show competitor distribution
+        competitors_in_input = {}
+        for p in gemini_input:
+            comp = p.get("detected_competitor", "market_signal")
+            competitors_in_input[comp] = competitors_in_input.get(comp, 0) + 1
+        print(f"[Pipeline] DEBUG: Competitor distribution in Gemini input:")
+        for comp, count in sorted(competitors_in_input.items(), key=lambda x: x[1], reverse=True):
+            print(f"  {comp}: {count} posts")
         
         gemini_output = GeminiProcessor().process(gemini_input)
 
