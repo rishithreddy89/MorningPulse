@@ -10,6 +10,7 @@ from supabase import create_client
 
 from scraper.linkedin_scraper import LinkedInScraper
 from processor.linkedin_analyzer import LinkedInAnalyzer
+from utils.logger import log_step, log_info, log_error, log_success, log_data
 
 
 linkedin_bp = Blueprint("linkedin", __name__, url_prefix="/api/linkedin")
@@ -25,7 +26,7 @@ def _save_linkedin_data(data: dict) -> bool:
     
     Returns True if saved to Supabase, False if using local fallback.
     """
-    print("Saving LinkedIn data...")
+    log_step("Saving LinkedIn data")
     
     try:
         supabase.table("linkedin_intel").upsert({
@@ -33,12 +34,12 @@ def _save_linkedin_data(data: dict) -> bool:
             "content": json.dumps(data)
         }).execute()
         
-        print("✅ Saved to Supabase")
+        log_success("LinkedIn data saved to Supabase")
         return True
     
     except Exception as e:
-        print(f"⚠️  Supabase error: {e}")
-        print("Falling back to local storage...")
+        log_error(f"Supabase error: {e}")
+        log_info("Falling back to local storage")
         
         try:
             os.makedirs("outputs", exist_ok=True)
@@ -47,16 +48,18 @@ def _save_linkedin_data(data: dict) -> bool:
             with open(file_path, "w") as f:
                 json.dump(data, f, indent=2)
             
-            print(f"✅ Saved locally to {file_path}")
+            log_success(f"LinkedIn data saved locally to {file_path}")
             return False
         
         except Exception as local_err:
-            print(f"❌ Local storage error: {local_err}")
+            log_error(f"Local storage error: {local_err}")
             return False
 
 
 def _load_latest_intel() -> dict:
     """Load latest LinkedIn intelligence from Supabase or local files."""
+    
+    log_info("Loading latest LinkedIn intelligence")
     
     # Try Supabase first
     try:
@@ -72,21 +75,24 @@ def _load_latest_intel() -> dict:
             content = result.data[0]["content"]
             if isinstance(content, str):
                 content = json.loads(content)
+            log_success("LinkedIn data loaded from Supabase")
             return content
     
     except Exception as e:
-        print(f"Supabase query error: {e}")
+        log_error(f"Supabase query error: {e}")
     
     # Fallback to local files
     try:
         file_path = f"outputs/linkedin_{date.today().isoformat()}.json"
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
+                log_success("LinkedIn data loaded from local file")
                 return json.load(f)
     
     except Exception as e:
-        print(f"Local file error: {e}")
+        log_error(f"Local file error: {e}")
     
+    log_info("No LinkedIn data available")
     # Return empty result
     return {
         "error": "No LinkedIn data available. Click Scrape LinkedIn.",
@@ -103,29 +109,33 @@ def scrape_linkedin():
     
     def run_linkedin_pipeline():
         try:
-            print("LinkedIn pipeline starting...")
+            log_step("LinkedIn pipeline starting")
             
             scraper = LinkedInScraper(headless=True)
             posts = scraper.scrape_all()
             
             if not posts:
-                print("LinkedIn: no posts collected")
+                log_info("LinkedIn: no posts collected")
                 return
             
+            log_step("Analyzing LinkedIn posts")
             analysis = LinkedInAnalyzer().analyze(posts)
             
             analysis["raw_posts"] = posts
             analysis["total_posts"] = len(posts)
             analysis["date"] = date.today().isoformat()
             
+            log_data("Total LinkedIn posts", len(posts))
+            
             # Save with fallback to local storage
             _save_linkedin_data(analysis)
             
-            print(f"LinkedIn pipeline complete. {len(posts)} posts analyzed.")
+            log_success(f"LinkedIn pipeline complete: {len(posts)} posts analyzed")
         
         except Exception as e:
-            print(f"LinkedIn pipeline error: {e}")
+            log_error(f"LinkedIn pipeline error: {e}")
     
+    log_info("LinkedIn scrape triggered via API")
     thread = threading.Thread(target=run_linkedin_pipeline, daemon=True)
     thread.start()
     
@@ -143,7 +153,7 @@ def get_latest_intel():
         return jsonify(data)
     
     except Exception as e:
-        print(f"Error loading intel: {e}")
+        log_error(f"Error loading intel: {e}")
         return jsonify({
             "error": "Error loading data",
             "competitor_activities": [],
@@ -156,6 +166,7 @@ def get_latest_intel():
 @linkedin_bp.route("/intel/<date_str>", methods=["GET"])
 def get_intel_by_date(date_str):
     """Return LinkedIn intelligence for specific date."""
+    log_info(f"Loading LinkedIn data for {date_str}")
     try:
         # Try Supabase first
         try:
@@ -171,21 +182,24 @@ def get_intel_by_date(date_str):
                 content = result.data[0]["content"]
                 if isinstance(content, str):
                     content = json.loads(content)
+                log_success(f"LinkedIn data loaded for {date_str}")
                 return jsonify(content)
         
         except Exception as e:
-            print(f"Supabase query error: {e}")
+            log_error(f"Supabase query error: {e}")
         
         # Fallback to local file
         file_path = f"outputs/linkedin_{date_str}.json"
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
+                log_success(f"LinkedIn data loaded from local file for {date_str}")
                 return jsonify(json.load(f))
         
+        log_info(f"No data found for {date_str}")
         return jsonify({"error": f"No data for {date_str}"}), 200
     
     except Exception as e:
-        print(f"Error loading date intel: {e}")
+        log_error(f"Error loading date intel: {e}")
         return jsonify({"error": str(e)}), 200
 
 
@@ -213,7 +227,7 @@ def check_status():
                 }), 200
         
         except Exception as e:
-            print(f"Supabase status error: {e}")
+            log_error(f"Supabase status error: {e}")
         
         # Fallback to local file
         file_path = f"outputs/linkedin_{date.today().isoformat()}.json"
@@ -234,7 +248,7 @@ def check_status():
         }), 200
     
     except Exception as e:
-        print(f"Status check error: {e}")
+        log_error(f"Status check error: {e}")
         return jsonify({
             "status": "error",
             "message": str(e)

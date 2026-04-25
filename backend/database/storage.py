@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from supabase import create_client
 
 import config
+from utils.logger import log_info, log_error, log_success
 
 
 class Storage:
@@ -24,10 +25,10 @@ class Storage:
                 raise ValueError("Missing Supabase credentials")
             self.supabase = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
             self.use_supabase = True
-            print("[Storage] Supabase connected")
+            log_success("Supabase connected")
         except Exception:
             self.use_supabase = False
-            print("[Storage] Supabase unavailable, using local storage")
+            log_info("Supabase unavailable, using local storage")
 
     def _local_path(self, date_str: str) -> str:
         """Build the local digest file path for a given date key."""
@@ -40,9 +41,9 @@ class Storage:
         try:
             with open(self._local_path(date_str), "w", encoding="utf-8") as output_file:
                 json.dump(digest, output_file, indent=2)
-            print(f"[Storage] Digest saved locally: {date_str}")
+            log_success(f"Digest saved locally: {date_str}")
         except Exception as exc:
-            print(f"[Storage] Local save failed: {exc}")
+            log_error(f"Local save failed: {exc}")
             return False
 
         if self.use_supabase and self.supabase is not None:
@@ -54,9 +55,9 @@ class Storage:
                     },
                     on_conflict="date",
                 ).execute()
-                print(f"[Storage] Digest saved to Supabase: {date_str}")
+                log_success(f"Digest saved to Supabase: {date_str}")
             except Exception as exc:
-                print(f"[Storage] Supabase save failed (non-critical): {exc}")
+                log_error(f"Supabase save failed (non-critical): {exc}")
 
         return True
 
@@ -68,7 +69,7 @@ class Storage:
                 with open(path, "r", encoding="utf-8") as input_file:
                     return json.load(input_file)
             except Exception as exc:
-                print(f"[Storage] Failed reading digest {date_str}: {exc}")
+                log_error(f"Failed reading digest {date_str}: {exc}")
                 return None
         return None
 
@@ -88,7 +89,7 @@ class Storage:
                 if result.data and len(result.data) > 0:
                     return result.data[0].get("content")
             except Exception as exc:
-                print(f"[Storage] Supabase query failed: {exc}")
+                log_error(f"Supabase query failed: {exc}")
         
         return None
 

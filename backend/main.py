@@ -7,15 +7,18 @@ import time
 from datetime import date
 from typing import Any, Dict, List, Optional
 
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify, send_file, request
 from flask_cors import CORS
 
 import config
 from api.routes import register_routes
+from utils.logger import log_step, log_info, log_error, log_success, log_data, log_request
 from api.linkedin_routes import linkedin_bp
 from api.chat_routes import chat_bp
 from api.warroom_routes import warroom_bp
 from api.export_routes import export_bp
+from api.settings_routes import settings_bp
+from api.scheduler_routes import scheduler_bp
 from database.storage import Storage
 from processor.gemini_processor import GeminiProcessor
 from processor.post_selector import select_best_posts
@@ -29,6 +32,12 @@ from processor.battle_card_generator import BattleCardGenerator
 app = Flask(__name__)
 app.config["SECRET_KEY"] = config.FLASK_SECRET_KEY
 CORS(app)
+
+# Request logging middleware
+@app.before_request
+def log_request_info():
+    """Log all incoming requests."""
+    log_request(request.method, request.path)
 
 MAX_GEMINI_POSTS = 40  # Send up to 40 posts to Gemini (increased from 15)
 MAX_SUMMARY_LENGTH = 250  # Increased summary length
@@ -89,7 +98,7 @@ def _prepare_gemini_input(posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def run_pipeline() -> Optional[Dict[str, Any]]:
     """Full pipeline: scrape, process, analyze, and save digest."""
-    print("[Pipeline] Pipeline starting...")
+    log_step("Pipeline starting")
     start_time = time.time()
 
     hn_posts: List[Dict[str, Any]] = []
@@ -101,93 +110,101 @@ def run_pipeline() -> Optional[Dict[str, Any]]:
     rss_scraper = RssScraper()
 
     try:
+        log_step("Scraping HackerNews")
         hn_posts = HackerNewsScraper().scrape(config.TOP_HN_STORIES)
-        print(f"[Pipeline] HackerNews: {len(hn_posts)} posts")
+        log_data("HackerNews posts", len(hn_posts))
     except Exception as exc:
-        print(f"[Pipeline] HackerNews scraper failed: {exc}")
+        log_error(f"HackerNews scraper failed: {exc}")
 
     try:
+        log_step("Scraping Google News RSS")
         google_news_posts = rss_scraper.fetch_google_news()
-        print(f"[Pipeline] Google News RSS: {len(google_news_posts)} posts")
+        log_data("Google News posts", len(google_news_posts))
     except Exception as exc:
-        print(f"[Pipeline] Google News RSS scraper failed: {exc}")
+        log_error(f"Google News RSS scraper failed: {exc}")
 
-    # Replace broken Reddit with new RSS sources
     try:
+        log_step("Scraping News RSS feeds")
         news_rss_posts = NewsRssScraper(hours_lookback=48).scrape_all()
-        print(f"[Pipeline] News RSS (replaces Reddit): {len(news_rss_posts)} posts")
+        log_data("News RSS posts", len(news_rss_posts))
     except Exception as exc:
-        print(f"[Pipeline] News RSS scraper failed: {exc}")
+        log_error(f"News RSS scraper failed: {exc}")
 
     try:
+        log_step("Scraping EdSurge")
         edsurge_posts = rss_scraper.fetch_edsurge()
-        print(f"[Pipeline] EdSurge: {len(edsurge_posts)} posts")
+        log_data("EdSurge posts", len(edsurge_posts))
     except Exception as exc:
-        print(f"[Pipeline] EdSurge scraper failed: {exc}")
+        log_error(f"EdSurge scraper failed: {exc}")
 
     try:
+        log_step("Scraping Product Hunt")
         producthunt_posts = rss_scraper.fetch_producthunt()
-        print(f"[Pipeline] Product Hunt: {len(producthunt_posts)} posts")
+        log_data("Product Hunt posts", len(producthunt_posts))
     except Exception as exc:
-        print(f"[Pipeline] Product Hunt scraper failed: {exc}")
+        log_error(f"Product Hunt scraper failed: {exc}")
 
     all_posts = hn_posts + google_news_posts + news_rss_posts + edsurge_posts + producthunt_posts
-    print(f"[Pipeline] Total raw posts: {len(all_posts)}")
+    log_data("Total raw posts", len(all_posts))
 
-    # Use intelligent scoring and selection with diversity (20-40 posts)
+    log_step("Filtering and selecting best posts")
     filtered_posts = select_best_posts(all_posts, n=40)
+    log_data("Selected posts", len(filtered_posts))
 
     if not filtered_posts:
+        log_info("No posts to process, using empty output")
         gemini_output = _empty_edtech_output()
     else:
-        print("[Pipeline] Sending to Gemini...")
-        # Prepare optimized input (up to 40 posts with increased token limits)
+        log_step("Preparing data for Gemini AI")
         gemini_input = _prepare_gemini_input(filtered_posts)
-        print(f"[Pipeline] Gemini input: {len(gemini_input)} posts")
+        log_data("Posts sent to Gemini", len(gemini_input))
         
-        # DEBUG: Verify URLs are preserved
         urls_in_input = sum(1 for p in gemini_input if p.get("url"))
-        print(f"[Pipeline] DEBUG: {urls_in_input}/{len(gemini_input)} posts have URLs in Gemini input")
+        log_data("Posts with URLs", f"{urls_in_input}/{len(gemini_input)}")
         
-        # DEBUG: Show competitor distribution
-        competitors_in_input = {}
-        for p in gemini_input:
-            comp = p.get("detected_competitor", "market_signal")
-            competitors_in_input[comp] = competitors_in_input.get(comp, 0) + 1
-        print(f"[Pipeline] DEBUG: Competitor distribution in Gemini input:")
-        for comp, count in sorted(competitors_in_input.items(), key=lambda x: x[1], reverse=True):
-            print(f"  {comp}: {count} posts")
-        
+        log_step("Sending data to Gemini AI")
         gemini_output = GeminiProcessor().process(gemini_input)
+        log_success("Gemini processing complete")
 
     date_str = date.today().isoformat()
+    log_step("Building digest")
     digest = DigestBuilder().build(gemini_output, date_str)
 
-    # --- NEW STEP: BATTLE CARDS ---
+    log_step("Analyzing customer risk alerts")
+    try:
+        from processor.customer_risk_analyzer import CustomerRiskAnalyzer
+        risk_analyzer = CustomerRiskAnalyzer()
+        customer_risk_alerts = risk_analyzer.analyze(filtered_posts, digest)
+        digest["customer_risk_alerts"] = customer_risk_alerts
+        log_data("Customer risk alerts", len(customer_risk_alerts))
+    except Exception as exc:
+        log_error(f"Customer risk analysis failed: {exc}")
+        digest["customer_risk_alerts"] = []
+
     competitor_updates = digest.get("competitor_updates", [])
     
     if competitor_updates:
-        print(f"[Pipeline] Generating battle cards for "
-              f"{len(competitor_updates)} competitors...")
+        log_step(f"Generating battle cards for {len(competitor_updates)} competitors")
         try:
             battle_cards = BattleCardGenerator().generate_all(
                 competitor_updates
             )
             digest["battle_cards"] = battle_cards
-            print(f"[Pipeline] Added {len(battle_cards)} battle cards to digest")
+            log_data("Battle cards generated", len(battle_cards))
         except Exception as exc:
-            print(f"[Pipeline] Battle card generation failed: {exc}")
+            log_error(f"Battle card generation failed: {exc}")
             digest["battle_cards"] = []
     else:
         digest["battle_cards"] = []
-        print("[Pipeline] No competitor updates found, skipping battle cards")
-    # --- END NEW STEP ---
+        log_info("No competitor updates, skipping battle cards")
 
+    log_step("Saving digest to database")
     storage = Storage()
     storage.save_digest(digest)
+    log_success("Digest saved successfully")
 
     elapsed = round(time.time() - start_time, 1)
-    print(f"[Pipeline] Pipeline complete in {elapsed}s")
+    log_success(f"Pipeline complete in {elapsed}s")
     return digest
 
 
@@ -196,6 +213,8 @@ app.register_blueprint(linkedin_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(warroom_bp)
 app.register_blueprint(export_bp)
+app.register_blueprint(settings_bp)
+app.register_blueprint(scheduler_bp)
 
 
 def _resolve_frontend_dir() -> Optional[str]:
@@ -243,21 +262,22 @@ def main() -> None:
     port = int(os.getenv("FLASK_PORT", str(args.port)))
 
     if args.no_schedule:
-        print("[Main] Running single pipeline execution...")
+        log_info("Running single pipeline execution")
         run_pipeline()
-        print("[Main] Done.")
+        log_success("Pipeline execution complete")
         return
 
     scheduler = JobScheduler(run_pipeline)
     scheduler.start(run_now=args.run_now)
 
-    print(f"[Main] Backend running at http://localhost:{port}")
-    print("[Main] Available endpoints:")
-    print("[Main]   GET  /api/digest")
-    print("[Main]   GET  /api/digest/<date>")
-    print("[Main]   GET  /api/dates")
-    print("[Main]   GET  /api/run")
-    print("[Main]   GET  /api/health")
+    log_success(f"Server started on port {port}")
+    log_info(f"Backend running at http://localhost:{port}")
+    log_info("Available endpoints:")
+    log_info("  GET  /api/digest")
+    log_info("  GET  /api/digest/<date>")
+    log_info("  GET  /api/dates")
+    log_info("  GET  /api/run")
+    log_info("  GET  /api/health")
     app.run(host="0.0.0.0", port=port, debug=False)
 
 

@@ -1,6 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeader } from "@/components/dashboard/Primitives";
+import { PainPointCard } from "@/components/dashboard/PainPointCard";
+import { CustomerRiskAlert } from "@/components/dashboard/CustomerRiskAlert";
 import { FloatingChat } from "@/components/FloatingChat";
 import { VoiceDigest } from "@/components/VoiceDigest";
 import { useDashboardData } from "@/lib/dashboard-context";
@@ -30,6 +32,7 @@ export function DashboardPage() {
   console.log("Emerging Trends:", trends);
   const painPoints = digest?.user_pain_points ?? [];
   const competitors = digest?.competitor_updates ?? [];
+  const customerRiskAlerts = digest?.customer_risk_alerts ?? [];
 
   const hasDigestData = !!digest && (trends.length > 0 || painPoints.length > 0 || competitors.length > 0);
   const isEmpty = !isLoading && !error && !hasDigestData;
@@ -99,36 +102,13 @@ export function DashboardPage() {
         <Card className="border-border p-0 shadow-none">
           <ul className="divide-y divide-border">
             {painPoints.map((point, index) => (
-              <li
+              <PainPointCard
                 key={`${point.issue}-${index}`}
-                className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-muted/50"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">{point.issue}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{point.context}</p>
-                  {point.sources && point.sources.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {point.sources.map((source, idx) => (
-                        source.url && source.url !== "#" && source.url !== "N/A" ? (
-                          <a
-                            key={idx}
-                            href={source.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary underline hover:text-primary/80"
-                          >
-                            {source.source_name}
-                          </a>
-                        ) : (
-                          <span key={idx} className="text-xs text-muted-foreground">
-                            {source.source_name}
-                          </span>
-                        )
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </li>
+                issue={point.issue}
+                context={point.context}
+                sources={point.sources}
+                index={index}
+              />
             ))}
           </ul>
         </Card>
@@ -283,6 +263,15 @@ export function DashboardPage() {
   const renderDashboard = () => (
     <>
       <VoiceDigest digest={digest} />
+      {customerRiskAlerts.length > 0 && (
+        <section>
+          <SectionHeader
+            title="Customer Risk Alert"
+            description="High-priority competitor actions that may impact customer retention"
+          />
+          <CustomerRiskAlert alerts={customerRiskAlerts} />
+        </section>
+      )}
       {renderTrends()}
       {renderPainPoints()}
       {renderCompetitors()}

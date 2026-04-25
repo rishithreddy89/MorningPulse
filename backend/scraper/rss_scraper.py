@@ -6,6 +6,8 @@ from typing import Any, Dict, List
 import feedparser
 import requests
 
+from utils.logger import log_info, log_error
+
 
 class RssScraper:
     """Scrape keyword-filtered stories from RSS feeds."""
@@ -45,11 +47,11 @@ class RssScraper:
             response = requests.get(self.GOOGLE_NEWS_URL, headers=self.REQUEST_HEADERS, timeout=10)
             feed = feedparser.parse(response.content)
         except Exception as exc:
-            print(f"[RssScraper] Google News fetch error: {exc}")
+            log_error(f"Google News fetch error: {exc}")
             return []
 
         if not feed.entries:
-            print(f"[RssScraper] Google News returned 0 entries. bozo={feed.bozo} status={getattr(feed, 'status', 'N/A')}")
+            log_info(f"Google News returned 0 entries. bozo={feed.bozo}")
 
         return [
             {
@@ -87,7 +89,7 @@ class RssScraper:
                         }
                     )
         
-        print(f"[Pipeline] Reddit RSS: {len(posts)} posts")
+        log_info(f"Reddit RSS: {len(posts)} posts")
         return posts
 
     def _try_pullpush(self, subreddit: str) -> list:
@@ -101,7 +103,6 @@ class RssScraper:
                 "sort_type": "desc"
             }
             response = requests.get(url, params=params, headers=self.REQUEST_HEADERS, timeout=10)
-            print(f"[Reddit] Pullpush {subreddit} status: {response.status_code}")
             
             if not response.content or len(response.content) < 10:
                 return []
@@ -109,7 +110,7 @@ class RssScraper:
             data = response.json()
             return data.get("data", [])
         except Exception as e:
-            print(f"[Reddit] Pullpush {subreddit} failed: {e}")
+            log_error(f"Pullpush {subreddit} failed: {e}")
             return []
 
     def fetch_edsurge(self) -> List[Dict[str, Any]]:
@@ -117,9 +118,7 @@ class RssScraper:
         for url in self.EDSURGE_RSS_URLS:
             try:
                 response = requests.get(url, headers=self.REQUEST_HEADERS, timeout=10)
-                print(f"[EdSurge] Trying {url} → status: {response.status_code}")
                 feed = feedparser.parse(response.content)
-                print(f"[EdSurge] bozo: {feed.bozo}, entries: {len(feed.entries)}")
                 
                 if feed.entries:
                     posts = [
@@ -134,13 +133,12 @@ class RssScraper:
                         for entry in feed.entries
                         if entry.get("title") and entry.get("link")
                     ]
-                    print(f"[Pipeline] EdSurge: {len(posts)} posts")
                     return posts
             except Exception as exc:
-                print(f"[EdSurge] Fetch error {url}: {exc}")
+                log_error(f"EdSurge fetch error {url}: {exc}")
                 continue
         
-        print("[EdSurge] All primary URLs failed, trying fallback sources")
+        log_info("EdSurge primary URLs failed, trying fallback sources")
         return self._fetch_edsurge_fallback()
 
     def _fetch_edsurge_fallback(self) -> List[Dict[str, Any]]:
@@ -148,9 +146,7 @@ class RssScraper:
         for url in self.EDSURGE_FALLBACK_URLS:
             try:
                 response = requests.get(url, headers=self.REQUEST_HEADERS, timeout=10)
-                print(f"[EdSurge Fallback] Trying {url} → status: {response.status_code}")
                 feed = feedparser.parse(response.content)
-                print(f"[EdSurge Fallback] bozo: {feed.bozo}, entries: {len(feed.entries)}")
                 
                 if feed.entries:
                     posts = [
@@ -165,13 +161,11 @@ class RssScraper:
                         for entry in feed.entries
                         if entry.get("title") and entry.get("link")
                     ]
-                    print(f"[Pipeline] EdSurge: {len(posts)} posts")
                     return posts
             except Exception as exc:
-                print(f"[EdSurge Fallback] Fetch error {url}: {exc}")
+                log_error(f"EdSurge fallback fetch error {url}: {exc}")
                 continue
         
-        print("[Pipeline] EdSurge: 0 posts")
         return []
 
     def fetch_producthunt(self) -> List[Dict[str, Any]]:
@@ -180,7 +174,7 @@ class RssScraper:
             response = requests.get(self.PRODUCTHUNT_RSS_URL, headers=self.REQUEST_HEADERS, timeout=10)
             feed = feedparser.parse(response.content)
         except Exception as exc:
-            print(f"[RssScraper] Product Hunt fetch error: {exc}")
+            log_error(f"Product Hunt fetch error: {exc}")
             return []
 
         posts: List[Dict[str, Any]] = []
@@ -263,7 +257,7 @@ class RssScraper:
 
                 time.sleep(0.5)
             except Exception as exc:
-                print(f"[RssScraper] RSS feed error {feed_url}: {exc}")
+                log_error(f"RSS feed error {feed_url}: {exc}")
                 continue
 
         results.sort(key=lambda item: item.get("created_utc", 0), reverse=True)

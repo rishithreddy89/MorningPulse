@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from utils.logger import log_info, log_error
+
 
 class HackerNewsScraper:
     """Scrape top Hacker News stories and key discussion comments."""
@@ -53,7 +55,7 @@ class HackerNewsScraper:
         try:
             top_story_ids = self._fetch_json(self.TOP_STORIES_URL)
         except Exception as exc:
-            print(f"[HackerNewsScraper] Failed to fetch top stories: {exc}")
+            log_error(f"Failed to fetch top stories: {exc}")
             return results
 
         for story_id in top_story_ids[: max(30, limit * 2)]:

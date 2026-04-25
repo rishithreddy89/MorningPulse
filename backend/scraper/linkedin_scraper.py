@@ -17,6 +17,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 
+from utils.logger import log_step, log_info, log_error, log_success, log_data, log_warning
+
 
 LINKEDIN_COMPANIES = [
     {"handle": "classdojo", "name": "ClassDojo"},
@@ -57,13 +59,16 @@ class LinkedInScraper:
         self.driver = None
         self.wait = None
         self.is_logged_in = False
+        log_info("LinkedIn scraper initialized")
     
     def _setup_driver(self):
         """Configure Chrome with options to reduce bot detection."""
+        log_step("Setting up Chrome WebDriver")
         options = Options()
         
         if self.headless:
             options.add_argument("--headless=new")
+            log_info("Running in headless mode")
         
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
@@ -85,14 +90,17 @@ class LinkedInScraper:
         )
         
         self.wait = WebDriverWait(self.driver, 15)
-        print("Chrome driver initialized")
+        log_success("Chrome driver initialized")
     
     def login(self) -> bool:
         """Log into LinkedIn. Returns True on success, False on failure."""
+        log_step("Logging into LinkedIn")
         try:
             self.driver.get("https://www.linkedin.com/login")
+            log_info("Navigated to LinkedIn login page")
             time.sleep(2)
             
+            log_info("Entering credentials")
             email_field = self.wait.until(
                 EC.presence_of_element_located((By.ID, "username"))
             )
@@ -111,6 +119,7 @@ class LinkedInScraper:
             
             time.sleep(0.5)
             
+            log_info("Submitting login form")
             self.driver.find_element(
                 By.XPATH, "//button[@type='submit']"
             ).click()
@@ -121,28 +130,28 @@ class LinkedInScraper:
             
             if "feed" in current_url or "mynetwork" in current_url:
                 self.is_logged_in = True
-                print("LinkedIn login successful")
+                log_success("LinkedIn login successful")
                 return True
             
             elif "checkpoint" in current_url or "challenge" in current_url:
-                print("LinkedIn security checkpoint triggered")
-                print("Cannot proceed - manual verification required")
+                log_error("LinkedIn security checkpoint triggered")
+                log_warning("Manual verification required")
                 return False
             
             elif "login" in current_url:
-                print("LinkedIn login failed - check credentials")
+                log_error("LinkedIn login failed - check credentials")
                 return False
             
             else:
                 self.is_logged_in = True
-                print(f"LinkedIn login - redirected to: {current_url}")
+                log_success(f"LinkedIn login successful - redirected to: {current_url}")
                 return True
         
         except TimeoutException:
-            print("LinkedIn login timeout - page took too long")
+            log_error("LinkedIn login timeout - page took too long")
             return False
         except Exception as e:
-            print(f"LinkedIn login error: {e}")
+            log_error(f"LinkedIn login error: {e}")
             return False
     
     def _is_valid_post_text(self, text: str) -> bool:
@@ -180,18 +189,18 @@ class LinkedInScraper:
                     (By.CSS_SELECTOR, "div.feed-shared-update-v2")
                 )
             )
-            print(f"  Posts loaded for {company_name}")
+            log_info(f"Posts loaded for {company_name}")
             
             # Check for "No posts yet" message
             if self._check_no_posts_page():
-                print(f"  {company_name}: No posts yet")
+                log_info(f"{company_name}: No posts yet")
                 return []
             
             # Find all post containers
             post_elements = self.driver.find_elements(
                 By.CSS_SELECTOR, "div.feed-shared-update-v2"
             )
-            print(f"  Found {len(post_elements)} post containers")
+            log_data(f"{company_name} post containers", len(post_elements))
             
             valid_posts = []
             
@@ -241,17 +250,17 @@ class LinkedInScraper:
                         break
                 
                 except Exception as e:
-                    print(f"    Error extracting post {idx}: {e}")
+                    log_error(f"Error extracting post {idx}: {e}")
                     continue
             
-            print(f"  {company_name}: {len(valid_posts)} real posts extracted")
+            log_data(f"{company_name} valid posts", len(valid_posts))
             return valid_posts
         
         except TimeoutException:
-            print(f"  Timeout waiting for posts on {company_name}")
+            log_error(f"Timeout waiting for posts on {company_name}")
             return []
         except Exception as e:
-            print(f"  Error extracting posts from {company_name}: {e}")
+            log_error(f"Error extracting posts from {company_name}: {e}")
             return []
     
     def scrape_company(self, company: Dict) -> List[Dict]:
@@ -260,10 +269,13 @@ class LinkedInScraper:
         name = company["name"]
         url = f"https://www.linkedin.com/company/{handle}/posts/"
         
+        log_info(f"Navigating to {name} LinkedIn page")
+        
         try:
             self.driver.get(url)
             time.sleep(3)
             
+            log_info(f"Scrolling to load posts for {name}")
             # Scroll to load posts
             self.driver.execute_script(
                 "window.scrollTo(0, document.body.scrollHeight / 3)"
@@ -280,7 +292,7 @@ class LinkedInScraper:
             return posts
         
         except Exception as e:
-            print(f"  Error scraping {name}: {e}")
+            log_error(f"Error scraping {name}: {e}")
             return []
     
     def scrape_all(self, companies=None) -> List[Dict]:
@@ -288,28 +300,29 @@ class LinkedInScraper:
         if companies is None:
             companies = LINKEDIN_COMPANIES
         
+        log_step(f"Starting LinkedIn scraping for {len(companies)} companies")
         all_posts = []
         
         try:
             self._setup_driver()
             
             if not self.login():
-                print("LinkedIn login failed. Returning empty results.")
+                log_error("LinkedIn login failed. Returning empty results.")
                 return []
             
             for i, company in enumerate(companies):
-                print(f"\nScraping {company['name']} "
-                      f"({i+1}/{len(companies)})...")
+                log_step(f"Scraping {company['name']} ({i+1}/{len(companies)})")
                 
                 posts = self.scrape_company(company)
                 all_posts.extend(posts)
                 
                 if i < len(companies) - 1:
                     delay = random.uniform(8, 15)
-                    print(f"  Waiting {delay:.1f}s before next company...")
+                    log_info(f"Waiting {delay:.1f}s before next company...")
                     time.sleep(delay)
             
             # Deduplicate by URL
+            log_info("Deduplicating posts")
             seen = set()
             unique = []
             for post in all_posts:
@@ -320,11 +333,11 @@ class LinkedInScraper:
                     seen.add(key)
                     unique.append(post)
             
-            print(f"\nLinkedIn total: {len(unique)} unique posts")
+            log_success(f"LinkedIn scraping complete: {len(unique)} unique posts")
             return unique
         
         except Exception as e:
-            print(f"LinkedIn scrape_all error: {e}")
+            log_error(f"LinkedIn scrape_all error: {e}")
             return []
         
         finally:
@@ -336,6 +349,6 @@ class LinkedInScraper:
             if self.driver:
                 self.driver.quit()
                 self.driver = None
-                print("Chrome driver closed")
+                log_success("Chrome driver closed")
         except Exception:
             pass

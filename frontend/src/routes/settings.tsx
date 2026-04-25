@@ -34,9 +34,11 @@ function SettingsContent() {
   const { selectedDate } = useDashboardData();
   const [orgName, setOrgName] = useState("Acme Education");
   const [email, setEmail] = useState("brief@acme.edu");
+  const [deliveryTime, setDeliveryTime] = useState("08:00");
   const [emailBrief, setEmailBrief] = useState(true);
   const [includeCompetitors, setIncludeCompetitors] = useState(true);
   const [includeLowPriority, setIncludeLowPriority] = useState(false);
+  const [nextDelivery, setNextDelivery] = useState<string | null>(null);
 
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
@@ -46,45 +48,82 @@ function SettingsContent() {
     text: string;
   } | null>(null);
 
+  // Get user's timezone
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Calculate next delivery time
+  const calculateNextDelivery = (time: string) => {
+    const [hours, mins] = time.split(":").map(Number);
+    const next = new Date();
+    next.setHours(hours, mins, 0, 0);
+    if (next <= new Date()) {
+      next.setDate(next.getDate() + 1);
+    }
+    return next.toLocaleString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   // Load saved settings on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("morningpulse_settings");
-      if (saved) {
-        const settings = JSON.parse(saved);
-        setOrgName(settings.organization || "Acme Education");
-        setEmail(settings.email || "brief@acme.edu");
-        setEmailBrief(settings.emailBrief ?? true);
-        setIncludeCompetitors(settings.includeCompetitors ?? true);
-        setIncludeLowPriority(settings.includeLowPriority ?? false);
+    const loadSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/settings`);
+        if (res.ok) {
+          const settings = await res.json();
+          setOrgName(settings.organization || "MorningPulse AI");
+          setEmail(settings.email || "");
+          setDeliveryTime(settings.delivery_time || "08:00");
+          setEmailBrief(settings.email_enabled ?? true);
+          setIncludeCompetitors(settings.include_competitors ?? true);
+          setIncludeLowPriority(settings.include_low_priority ?? false);
+          setNextDelivery(calculateNextDelivery(settings.delivery_time || "08:00"));
+        }
+      } catch (err) {
+        console.error("Failed to load settings:", err);
       }
-    } catch (err) {
-      console.error("Failed to load settings:", err);
-    }
+    };
+    loadSettings();
   }, []);
+
+  // Update next delivery when time changes
+  useEffect(() => {
+    setNextDelivery(calculateNextDelivery(deliveryTime));
+  }, [deliveryTime]);
 
   const handleSaveSettings = async () => {
     setSaveLoading(true);
 
     try {
-      // Save settings to localStorage for now
-      // In production, this would be an API call to save to database
       const settings = {
         organization: orgName,
         email,
-        emailBrief,
-        includeCompetitors,
-        includeLowPriority,
+        delivery_time: deliveryTime,
+        email_enabled: emailBrief,
+        include_competitors: includeCompetitors,
+        include_low_priority: includeLowPriority,
       };
 
-      localStorage.setItem("morningpulse_settings", JSON.stringify(settings));
+      const res = await fetch(`${API_BASE}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
 
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const data = await res.json();
 
-      showStatus("success", "Settings saved successfully");
+      if (data.success) {
+        showStatus("success", data.message || "Settings saved successfully");
+        setNextDelivery(calculateNextDelivery(deliveryTime));
+      } else {
+        showStatus("error", data.error || "Failed to save settings");
+      }
     } catch (err) {
-      showStatus("error", "Failed to save settings");
+      showStatus("error", "Network error. Is the backend running?");
     } finally {
       setSaveLoading(false);
     }
@@ -185,9 +224,30 @@ function SettingsContent() {
             <p className="text-sm">Include competitor updates</p>
             <Switch checked={includeCompetitors} onCheckedChange={setIncludeCompetitors} />
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between border-b border-border pb-4">
             <p className="text-sm">Include low priority alerts</p>
             <Switch checked={includeLowPriority} onCheckedChange={setIncludeLowPriority} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Daily brief delivery time</p>
+              <p className="text-xs text-muted-foreground">
+                CEO receives the PDF report at this time every day ({userTimezone})
+              </p>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <Input
+                type="time"
+                value={deliveryTime}
+                onChange={(e) => setDeliveryTime(e.target.value)}
+                className="w-32"
+              />
+              {nextDelivery && (
+                <p className="text-xs text-muted-foreground">
+                  Next: {nextDelivery}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </Card>

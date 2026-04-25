@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 import praw
 
 import config
+from utils.logger import log_info, log_error
 
 
 class RedditScraper:
@@ -18,7 +19,7 @@ class RedditScraper:
             client_secret=config.REDDIT_CLIENT_SECRET,
             user_agent=config.REDDIT_USER_AGENT,
         )
-        print("[RedditScraper] Reddit scraper initialized")
+        log_info("Reddit scraper initialized")
 
     def _matches_keywords(self, title: str, content: str, keywords: List[str]) -> bool:
         """Check whether title or content contains any configured keyword."""
@@ -68,7 +69,7 @@ class RedditScraper:
 
                 time.sleep(1)
             except Exception as exc:
-                print(f"[RedditScraper] Error scraping r/{subreddit_name}: {exc}")
+                log_error(f"Error scraping r/{subreddit_name}: {exc}")
                 continue
 
         unique_by_url: Dict[str, Dict[str, Any]] = {}

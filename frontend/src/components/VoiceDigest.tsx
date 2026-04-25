@@ -334,7 +334,7 @@ export function VoiceDigest({ digest }: VoiceDigestProps) {
         {/* Header */}
         <div className="flex items-center gap-2">
           <Volume2 className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">🎙️ Morning Brief</h3>
+          <h3 className="text-lg font-semibold text-foreground">Morning Brief</h3>
         </div>
 
         {/* Controls */}

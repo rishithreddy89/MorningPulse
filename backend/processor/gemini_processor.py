@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 import google.generativeai as genai
 
 import config
+from utils.logger import log_step, log_info, log_error, log_success, log_data
 
 
 def extract_json(raw_text: str) -> dict:
@@ -181,14 +182,16 @@ class GeminiProcessor:
         """Configure Gemini SDK client and model."""
         genai.configure(api_key=config.GEMINI_API_KEY)
         self.model = genai.GenerativeModel(config.GEMINI_MODEL)
-        print("[GeminiProcessor] Gemini processor initialized")
+        log_info("Gemini processor initialized")
 
     def process(self, posts: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Process posts through Gemini with retry and validation."""
         if len(posts) > 35:
+            log_info(f"Splitting {len(posts)} posts into chunks")
             mid = len(posts) // 2
             d1 = self._process_chunk(posts[:mid])
             d2 = self._process_chunk(posts[mid:])
+            log_info("Merging chunk results")
             return self._merge(d1, d2)
         
         return self._process_chunk(posts)
@@ -217,23 +220,24 @@ class GeminiProcessor:
         last_error = None
         for attempt in range(3):
             try:
+                log_info(f"Gemini API call attempt {attempt + 1}/3")
                 response = self.model.generate_content(prompt)
                 parsed = extract_json(response.text)
                 validated = self._validate(parsed)
-                print(f"Gemini success on attempt {attempt + 1}")
+                log_success(f"Gemini processing successful on attempt {attempt + 1}")
                 return validated
             
             except (json.JSONDecodeError, ValueError) as e:
                 last_error = e
-                print(f"Attempt {attempt+1} failed: {e}")
+                log_error(f"Attempt {attempt+1} failed: {e}")
                 time.sleep(3 * (attempt + 1))
             
             except Exception as e:
                 last_error = e
-                print(f"Gemini API error attempt {attempt+1}: {e}")
+                log_error(f"Gemini API error attempt {attempt+1}: {e}")
                 time.sleep(5)
         
-        print(f"All attempts failed: {last_error}")
+        log_error(f"All Gemini attempts failed: {last_error}")
         return self._default_digest()
 
     def _validate(self, parsed: dict) -> dict:
@@ -263,19 +267,19 @@ class GeminiProcessor:
             
             # Skip if no real company name
             if not competitor_name or competitor_name.lower() in ["market signal", "industry trend", "unknown", "market_signal"]:
-                print(f"[Classifier] Skipping non-company update: {title}")
+                log_info(f"Skipping non-company update: {title}")
                 continue
             
             # Skip if it's a general trend (not a specific action)
             trend_keywords = ["trend", "movement", "shift", "pattern", "growing", "increasing", "industry"]
             if any(keyword in title.lower() for keyword in trend_keywords):
-                print(f"[Classifier] Moving to trends: {title}")
+                log_info(f"Moving to trends: {title}")
                 continue
             
             # Skip if it's a user pain point
             pain_keywords = ["struggle", "frustrated", "problem", "issue", "challenge", "difficulty"]
             if any(keyword in title.lower() for keyword in pain_keywords):
-                print(f"[Classifier] Moving to pain points: {title}")
+                log_info(f"Moving to pain points: {title}")
                 continue
             
             # ════════════════════════════════════════════════════════════
@@ -286,7 +290,7 @@ class GeminiProcessor:
             event_signature = f"{competitor_name.lower()}:{title.lower()[:30]}"
             
             if event_signature in seen_events:
-                print(f"[Dedup] Skipping duplicate event: {competitor_name} - {title}")
+                log_info(f"Skipping duplicate event: {competitor_name} - {title}")
                 continue
             
             # Check if company already has an update
@@ -335,7 +339,7 @@ class GeminiProcessor:
         
         parsed["competitor_updates"] = competitor_updates[:5]  # Max 5
         
-        print(f"[Classifier] Competitor updates after dedup: {len(competitor_updates)}")
+        log_data("Competitor updates after dedup", len(competitor_updates))
         
         # ════════════════════════════════════════════════════════════════
         # STEP 2: Validate emerging trends
@@ -381,7 +385,7 @@ class GeminiProcessor:
         full = "\n---\n".join(lines)
         if len(full) > 18000:
             full = full[:18000]
-            print(f"Context truncated to 18000 chars")
+            log_info("Context truncated to 18000 chars")
         return full
     
     def _group_by_competitor(self, posts: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
