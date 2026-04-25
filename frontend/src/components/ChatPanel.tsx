@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Send, Loader2 } from 'lucide-react'
 
 interface Message {
@@ -102,8 +101,8 @@ export function ChatPanel({ date }: { date?: string }) {
           Ask questions about today's market intelligence
         </p>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col p-0">
-        <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-4" ref={scrollRef}>
           {messages.length === 0 ? (
             <div className="py-8 space-y-4">
               <p className="text-sm text-muted-foreground text-center mb-4">
@@ -158,7 +157,7 @@ export function ChatPanel({ date }: { date?: string }) {
               )}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
         <div className="border-t p-4">
           <div className="flex gap-2">
