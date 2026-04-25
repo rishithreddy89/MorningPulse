@@ -95,8 +95,8 @@ export function ChatPanel({ date }: { date?: string }) {
   }
 
   return (
-    <Card className="flex flex-col h-[600px]">
-      <CardHeader>
+    <Card className="flex flex-col h-full border-0 shadow-none">
+      <CardHeader className="pb-3">
         <CardTitle className="text-lg">Chat with Your Digest</CardTitle>
         <p className="text-sm text-muted-foreground">
           Ask questions about today's market intelligence

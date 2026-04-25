@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeader } from "@/components/dashboard/Primitives";
-import { ChatPanel } from "@/components/ChatPanel";
+import { FloatingChat } from "@/components/FloatingChat";
+import { VoiceDigest } from "@/components/VoiceDigest";
 import { useDashboardData } from "@/lib/dashboard-context";
 import { useEffect, useState } from "react";
 import { fetchBattleCards, type BattleCard } from "@/lib/api";
@@ -281,48 +282,47 @@ export function DashboardPage() {
 
   const renderDashboard = () => (
     <>
+      <VoiceDigest digest={digest} />
       {renderTrends()}
       {renderPainPoints()}
       {renderCompetitors()}
       {renderBattleCards()}
-      <section>
-        <SectionHeader
-          title="Ask the Data"
-          description="Chat with your digest to get instant answers"
-        />
-        <ChatPanel date={digest?.date} />
-      </section>
     </>
   );
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10">
-      <header>
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Daily brief
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">Dashboard</h1>
-      </header>
+    <>
+      <div className="mx-auto max-w-6xl space-y-10">
+        <header>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Daily brief
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">Dashboard</h1>
+        </header>
 
-      {isLoading && (
-        <Card className="border-border p-6 shadow-none">
-          <p className="text-sm text-muted-foreground">Loading dashboard...</p>
-        </Card>
-      )}
+        {isLoading && (
+          <Card className="border-border p-6 shadow-none">
+            <p className="text-sm text-muted-foreground">Loading dashboard...</p>
+          </Card>
+        )}
 
-      {!isLoading && error && (
-        <Card className="border-border p-6 shadow-none">
-          <p className="text-sm text-destructive">{error}</p>
-        </Card>
-      )}
+        {!isLoading && error && (
+          <Card className="border-border p-6 shadow-none">
+            <p className="text-sm text-destructive">{error}</p>
+          </Card>
+        )}
 
-      {isEmpty && (
-        <Card className="border-border p-6 shadow-none">
-          <p className="text-sm text-muted-foreground">No data yet. Click refresh.</p>
-        </Card>
-      )}
+        {isEmpty && (
+          <Card className="border-border p-6 shadow-none">
+            <p className="text-sm text-muted-foreground">No data yet. Click refresh.</p>
+          </Card>
+        )}
 
-      {!isLoading && !error && hasDigestData && renderDashboard()}
-    </div>
+        {!isLoading && !error && hasDigestData && renderDashboard()}
+      </div>
+
+      {/* Floating Chat Widget */}
+      <FloatingChat date={digest?.date} />
+    </>
   );
 }

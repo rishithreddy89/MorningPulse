@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WarroomRouteImport } from './routes/warroom'
 import { Route as TrendsRouteImport } from './routes/trends'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as LinkedinRouteImport } from './routes/linkedin'
 import { Route as IndexRouteImport } from './routes/index'
 
+const WarroomRoute = WarroomRouteImport.update({
+  id: '/warroom',
+  path: '/warroom',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TrendsRoute = TrendsRouteImport.update({
   id: '/trends',
   path: '/trends',
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/trends': typeof TrendsRoute
+  '/warroom': typeof WarroomRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/trends': typeof TrendsRoute
+  '/warroom': typeof WarroomRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,27 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/trends': typeof TrendsRoute
+  '/warroom': typeof WarroomRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/linkedin' | '/settings' | '/sources' | '/trends'
+  fullPaths:
+    | '/'
+    | '/linkedin'
+    | '/settings'
+    | '/sources'
+    | '/trends'
+    | '/warroom'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/linkedin' | '/settings' | '/sources' | '/trends'
-  id: '__root__' | '/' | '/linkedin' | '/settings' | '/sources' | '/trends'
+  to: '/' | '/linkedin' | '/settings' | '/sources' | '/trends' | '/warroom'
+  id:
+    | '__root__'
+    | '/'
+    | '/linkedin'
+    | '/settings'
+    | '/sources'
+    | '/trends'
+    | '/warroom'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,10 +99,18 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
   TrendsRoute: typeof TrendsRoute
+  WarroomRoute: typeof WarroomRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/warroom': {
+      id: '/warroom'
+      path: '/warroom'
+      fullPath: '/warroom'
+      preLoaderRoute: typeof WarroomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trends': {
       id: '/trends'
       path: '/trends'
@@ -125,6 +155,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
   TrendsRoute: TrendsRoute,
+  WarroomRoute: WarroomRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

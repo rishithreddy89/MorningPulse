@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, TrendingUp, Database, Settings, RefreshCw, Linkedin } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Database, Settings, RefreshCw, Linkedin, Activity } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,12 @@ function DashboardLayoutShell({ children }: { children: ReactNode }) {
           <span className="text-sm font-semibold tracking-tight">MorningPulse AI</span>
         </div>
         <div className="flex items-center gap-2">
+          <Link to="/warroom">
+            <Button variant="default" size="sm" className="h-9 gap-2">
+              <Activity className="h-4 w-4" />
+              Launch War Room
+            </Button>
+          </Link>
           <Select
             value={selectedDate ?? undefined}
             onValueChange={(value) => {

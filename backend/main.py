@@ -14,6 +14,7 @@ import config
 from api.routes import register_routes
 from api.linkedin_routes import linkedin_bp
 from api.chat_routes import chat_bp
+from api.warroom_routes import warroom_bp
 from database.storage import Storage
 from processor.gemini_processor import GeminiProcessor
 from processor.post_selector import select_best_posts
@@ -192,6 +193,7 @@ def run_pipeline() -> Optional[Dict[str, Any]]:
 register_routes(app, run_pipeline)
 app.register_blueprint(linkedin_bp)
 app.register_blueprint(chat_bp)
+app.register_blueprint(warroom_bp)
 
 
 def _resolve_frontend_dir() -> Optional[str]:

@@ -101,3 +101,25 @@ export async function fetchBattleCards(): Promise<BattleCardsResponse | null> {
     return null;
   }
 }
+
+export interface VoiceScriptResponse {
+  ssml: string;
+  date: string;
+  generated_at: string;
+}
+
+export async function fetchVoiceScript(): Promise<VoiceScriptResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/voice-script`);
+    if (isNotFound(res.status)) {
+      return null;
+    }
+    if (!res.ok) {
+      throw new Error("Failed to fetch voice script");
+    }
+    return (await res.json()) as VoiceScriptResponse;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+}

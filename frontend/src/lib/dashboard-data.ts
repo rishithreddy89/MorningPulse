@@ -20,6 +20,8 @@ export interface Trend {
   trend: string;
   explanation: string;
   sources?: Source[];
+  volume?: number;
+  direction?: string;
 }
 
 export interface PainPoint {
